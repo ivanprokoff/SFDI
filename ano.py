@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+from patterns_init import pics
 
 data_freq_red, data_freq_green = pics()
 
@@ -128,7 +128,7 @@ def start():
 #     if var.get()==10:
 #         var.set(560)
 #         trig=True
-#         sel()     
+#         sel()
 # #     var.set(10)
 
 #     trig=False
@@ -139,16 +139,15 @@ def start():
 
 
 def set_freq():
-    global data_freq, check_array, images2, images1, images3
     cols = data_freq.columns
-    # images2['00']=ImageTk.PhotoImage(data_freq['00'][0])
-    # images2['99']=ImageTk.PhotoImage(data_freq['99'][0])
-    images2['000'] = ImageTk.PhotoImage(data_freq['000'][0])
+
+    images['000'] = ImageTk.PhotoImage(data_freq['000'][0])
     for i, j in enumerate(check_array):
         if j.get():
             for k in range(6):
-                images2[cols[i] + '_' + str(k)] = ImageTk.PhotoImage(data_freq.T.iloc[i][k])
-                # images3[cols[i]+'_'+str(k)]=data_freq.T.iloc[i][k]
+                images[cols[i] + '_' + str(k)] = ImageTk.PhotoImage(data_freq.T.iloc[i][k])
+
+    return images
 
 
 # In[106]:
@@ -177,160 +176,9 @@ def set_array():
 #         if i<6:
 #             button_array[i].grid(column=3,row=i-1)
 #         elif i<12:
-#             button_array[i].grid(column=4,row=i-7+1)   
-#         else: 
-#             button_array[i].grid(column=5,row=i-12+1) 
-
-def open_photo():
-    global photo_k, photo_button, cap, set_button, bb, lmain
-
-    #     if photo_k==True:
-    #         photo_k=False
-    #         photo_button['background']='red'
-    #         cap.release()
-    #         bb.destroy()
-
-    bb = Toplevel(b)
-    bb.configure(background='black')
-    bb.attributes("-topmost", True)
-    bb.withdraw()
-    bb.geometry('+%d+%d' % (600, 50))
-    bb.geometry('100x100')
-
-    lmain = Label(bb, background='black')
-    lmain.grid(row=0, column=0)
-
-    photo_button['background'] = 'green'
-    cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
-    # cap.set(CAP_PROP_AUTO_WB, 0)
-    # cap = cv2.VideoCapture(1)
-    cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
-
-    focus = 85  # min: 0, max: 255, increment:5
-    cap.set(cv2.CAP_PROP_FOCUS, focus)
-    cap.set(cv2.CAP_PROP_EXPOSURE, -3)
-
-    width, height = 500, 500
-    # cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-
-    show_frame()
-
-
-def take_photo():
-    global e1, counter, bboxes, bbox_flag
-    bbox_flag = False
-
-    snap_button.config(fg='white')
-    startbutton.config(fg='yellow')
-    create_directory_photo()
-    global photo_count
-    _, frame1 = cap.read()
-    count = len(glob.glob(folder_photo + '/*'))
-
-    cv2.imwrite(folder_photo + f'/img_{count}.png', frame1)
-    counter = int(folder_var.get()) + 1
-    e1.delete(0, 'end')
-    e1.insert(0, str(counter))
-    # create_directory_photo()
-    bboxes = photo_pipeline.preprocessor.detect_nail_bboxes(frame1)
-
-
-def show_frame():
-    # if set_button['state']==DISABLED:
-    global bboxes, length, cap
-    _, frame2 = cap.read()
-
-    if len(bboxes) != 0:
-        for bbox, acc in zip(bboxes[0], bboxes[1]):
-            if acc < 0.5 or bbox[3] > 670 or bbox_flag:
-                continue
-            cv2.rectangle(frame2, (bbox[1], bbox[0]), (bbox[3], bbox[2]),
-                          (0, 255, 0), 2)
-
-    frame2 = cv2.flip(frame2, 1)
-    #     cv2.rectangle(frame2, ( 498,355), ( 567,425),
-    #                   (0, 0, 0), 2)
-    # frame2 = cv2.rotate(frame2, cv2.ROTATE_90_CLOCKWISE)
-    cv2.rectangle(frame2, (280, 70), (580, 480),
-                  (0, 0, 0), 2)
-    # frame2 = cv2.flip(frame2, 1)
-    frame2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2RGBA)
-    frame2 = cv2.rotate(frame2, cv2.ROTATE_90_COUNTERCLOCKWISE)
-    frame2 = cv2.flip(frame2, 1)
-
-    frame2 = frame2[300:, 150:]
-    img = I.fromarray(frame2)
-    imgtk = ImageTk.PhotoImage(image=img)
-    lmain.imgtk = imgtk
-    lmain.configure(image=imgtk)
-
-    lmain.after(50, show_frame)
-
-
-# In[107]:
-
-
-def predict_hb():
-    global l_hb, bbox_flag
-    bbox_flag = True
-    snap_button.config(fg='yellow')
-    predict_button.config(fg='white')
-    pred_dict = photo_pipeline.prediction_pipeline.pipeline_for_folder(folder_photo)
-    print(pred_dict)
-
-    std = str(round(np.random.normal(11, 2)))
-
-    l_hb.config(text='Hemoglobin \n' + str(int(pred_dict[-1]['HB_GperL'])) + f' +- {std} г / л ')
-
-
-# In[108]:
-
-
-def open_photo():
-    global photo_k, photo_button, cap, set_button, bb, lmain, start
-
-    #     if photo_k==True:
-    #         photo_k=False
-    #         photo_button['background']='red'
-    #         cap.release()
-    #         bb.destroy()
-
-    bb = Toplevel(b)
-    bb.overrideredirect(1)
-    bb.attributes("-topmost", True)
-    bb.geometry('+%d+%d' % (700, 100))
-    bb.geometry('560x620')
-
-    lmain = Label(bb)
-
-    lmain.grid(row=0, column=0)
-
-    # photo_button['background']='green'
-
-    cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
-    # cap.set(CAP_PROP_AUTO_WB, 0)
-    # cap = cv2.VideoCapture(1)
-    cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
-
-    focus = 85  # min: 0, max: 255, increment:5
-    cap.set(cv2.CAP_PROP_FOCUS, focus)
-    cap.set(cv2.CAP_PROP_EXPOSURE, -3)
-
-    width, height = 1000, 1000
-    # cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-
-    #     _, frame1 = cap.read()
-    #     cv2.imwrite('img.png', frame1)
-    # photo_button['background']='green'
-
-    show_frame()
-
-
-# In[109]:
+#             button_array[i].grid(column=4,row=i-7+1)
+#         else:
+#             button_array[i].grid(column=5,row=i-12+1)
 
 
 # cam = Thorlabs.ThorlabsTLCamera(serial='11354')

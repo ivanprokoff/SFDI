@@ -46,6 +46,3 @@ def pics():
             im_output = enhancer.enhance(factor)
             data_freq_green[i.split('\\')[-1].split('_')[0]][int(i.split('\\')[-1][-5])] = im.copy()
     return data_freq_red, data_freq_green
-
-
-data_freq_red, data_freq_green = pics()
