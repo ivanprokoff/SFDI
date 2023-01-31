@@ -5,7 +5,7 @@ import numpy as np
 from patterns_init import pics
 from PIL import ImageTk
 import projection_func as pf
-
+from projection import Projection
 data_freq_red, data_freq_green = pics()
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
@@ -17,8 +17,8 @@ check_array = list(np.zeros(len(freqs)))
 button_array = list(np.zeros(len(freqs)))
 images = {}
 
-#images = pf.set_freq(data_freq_red, images, check_array)
 
+# images = pf.set_freq(data_freq_red, images, check_array)
 
 
 class App(customtkinter.CTk):
@@ -28,7 +28,7 @@ class App(customtkinter.CTk):
         # configure window
         self.title("CustomTkinter complex_example.py")
         self.geometry(f"{1100}x{580}")
-
+        self.pattern_window = Projection()
         # configure grid layout (4x4)
         self.grid_columnconfigure(1, weight=1)
         self.grid_columnconfigure((2, 3), weight=0)
@@ -41,7 +41,7 @@ class App(customtkinter.CTk):
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame, text="CustomTkinter",
                                                  font=customtkinter.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
-        self.sidebar_button_1 = customtkinter.CTkButton(self.sidebar_frame, command=self.sidebar_button_event)
+        self.sidebar_button_1 = customtkinter.CTkButton(self.sidebar_frame, command=self.pattern_window.image_change)
         self.sidebar_button_1.grid(row=1, column=0, padx=20, pady=10)
         self.sidebar_button_2 = customtkinter.CTkButton(self.sidebar_frame, command=self.sidebar_button_event)
         self.sidebar_button_2.grid(row=2, column=0, padx=20, pady=10)
@@ -67,33 +67,16 @@ class App(customtkinter.CTk):
                                                      text_color=("gray10", "#DCE4EE"))
         self.main_button_1.grid(row=3, column=3, padx=(20, 20), pady=(20, 20), sticky="nsew")
 
-
-
-
-
-
-
         # create textbox
 
-
-        #main_window = tk.Toplevel(self.sidebar_frame)
+        # main_window = tk.Toplevel(self.sidebar_frame)
         img = customtkinter.CTkImage(data_freq_red['000'][0], size=(500, 500))
-        self.pattern_window = customtkinter.CTkLabel(self, image=img, text='')
 
-
-        self.pattern_window.grid(row=0, column=1, padx=(20, 0), pady=(20, 0))
-        cols = data_freq_red.columns
-
-        for i in cols[5:10]:
-
-            for k in range(6):
-                img = customtkinter.CTkImage(data_freq_red[i].iloc[k], size=(500, 500))
-                #self.pattern_window['image'] = img
-                self.pattern_window.after(150, self.pattern_window.configure(image=img, text=''))
-
-
-
-
+        # self.projection = customtkinter.CTkToplevel()
+        # self.pattern_window = customtkinter.CTkLabel(self, image=img, text='')
+        #
+        # self.pattern_window.grid(row=0, column=1, padx=(20, 0), pady=(20, 0))
+        # self.cols = data_freq_red.columns
 
 
 
@@ -133,6 +116,7 @@ class App(customtkinter.CTk):
         self.radio_button_3 = customtkinter.CTkRadioButton(master=self.radiobutton_frame, variable=self.radio_var,
                                                            value=2)
         self.radio_button_3.grid(row=3, column=2, pady=10, padx=20, sticky="n")
+        #self.file = Button(self, text='Browse', command=self.choose)
 
         # create checkbox and switch frame
         self.checkbox_slider_frame = customtkinter.CTkFrame(self)
@@ -199,6 +183,28 @@ class App(customtkinter.CTk):
         print("sidebar_button click")
 
 
+    def image_change(self, clock=1, data_freq_red=data_freq_red):
+        cols = data_freq_red.columns
+
+
+        if clock < 4:
+            i = clock
+            img = customtkinter.CTkImage(data_freq_red[cols[3]].iloc[i], size=(500, 500))
+
+            self.pattern_window['image'] = img
+            self.pattern_window['text'] = i
+            self.pattern_window.configure(image=img, text=i)
+            clock += 1
+            self.pattern_window.after(100, self.image_change, clock)
+
+
+
+
+
+
 if __name__ == "__main__":
     app = App()
     app.mainloop()
+
+
+
