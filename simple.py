@@ -1,72 +1,56 @@
-import customtkinter
+import cv2
+from tkinter import *
+from PIL import Image, ImageTk
 
-customtkinter.set_appearance_mode("dark")  # Modes: "System" (standard), "Dark", "Light"
-customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+cam_on = False
+cap = None
+mainWindow = Tk()
 
-app = customtkinter.CTk()
-app.geometry("400x780")
-app.title("CustomTkinter simple_example.py")
+mainFrame = Frame(mainWindow, height=640, width=810)
+mainFrame.place(x=350, y=0)
 
-def button_callback():
-    print("Button click", combobox_1.get())
-
-
-def slider_callback(value):
-    progressbar_1.set(value)
+cameraFrame = Frame(mainWindow, height=640, width=405)
+cameraFrame.place(x=0, y=0)
 
 
-frame_1 = customtkinter.CTkFrame(master=app)
-frame_1.pack(pady=20, padx=60, fill="both", expand=True)
+def show_frame():
+    if cam_on:
 
-label_1 = customtkinter.CTkLabel(master=frame_1, justify=customtkinter.LEFT)
-label_1.pack(pady=10, padx=10)
+        ret, frame = cap.read()
 
-progressbar_1 = customtkinter.CTkProgressBar(master=frame_1)
-progressbar_1.pack(pady=10, padx=10)
+        if ret:
+            cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(cv2image).resize((810, 640))
+            imgtk = ImageTk.PhotoImage(image=img)
+            vid_lbl.imgtk = imgtk
+            vid_lbl.configure(image=imgtk)
 
-button_1 = customtkinter.CTkButton(master=frame_1, command=button_callback)
-button_1.pack(pady=10, padx=10)
+        vid_lbl.after(10, show_frame)
 
-slider_1 = customtkinter.CTkSlider(master=frame_1, command=slider_callback, from_=0, to=1)
-slider_1.pack(pady=10, padx=10)
-slider_1.set(0.5)
 
-entry_1 = customtkinter.CTkEntry(master=frame_1, placeholder_text="CTkEntry")
-entry_1.pack(pady=10, padx=10)
+def start_vid():
+    global cam_on, cap
+    stop_vid()
+    cam_on = True
+    cap = cv2.VideoCapture(0)
+    show_frame()
 
-optionmenu_1 = customtkinter.CTkOptionMenu(frame_1, values=["Option 1", "Option 2", "Option 42 long long long..."])
-optionmenu_1.pack(pady=10, padx=10)
-optionmenu_1.set("CTkOptionMenu")
 
-combobox_1 = customtkinter.CTkComboBox(frame_1, values=["Option 1", "Option 2", "Option 42 long long long..."])
-combobox_1.pack(pady=10, padx=10)
-combobox_1.set("CTkComboBox")
+def stop_vid():
+    global cam_on
+    cam_on = False
 
-checkbox_1 = customtkinter.CTkCheckBox(master=frame_1)
-checkbox_1.pack(pady=10, padx=10)
+    if cap:
+        cap.release()
 
-radiobutton_var = customtkinter.IntVar(value=1)
 
-radiobutton_1 = customtkinter.CTkRadioButton(master=frame_1, variable=radiobutton_var, value=1)
-radiobutton_1.pack(pady=10, padx=10)
+vid_lbl = Label(mainFrame)
+vid_lbl.grid(row=0, column=0)
 
-radiobutton_2 = customtkinter.CTkRadioButton(master=frame_1, variable=radiobutton_var, value=2)
-radiobutton_2.pack(pady=10, padx=10)
+# Buttons
+TurnCameraOn = Button(cameraFrame, text="start Video", bg="blue", command=start_vid)
+TurnCameraOn.place(x=0, y=0)
+TurnCameraOff = Button(cameraFrame, text="stop Video", bg="blue", command=stop_vid)
+TurnCameraOff.place(x=0, y=300)
 
-switch_1 = customtkinter.CTkSwitch(master=frame_1)
-switch_1.pack(pady=10, padx=10)
-
-text_1 = customtkinter.CTkTextbox(master=frame_1, width=200, height=70)
-
-text_1.pack(pady=10, padx=10)
-text_1.insert("0.0", "CTkTextbox\n\n\n\n")
-
-segmented_button_1 = customtkinter.CTkSegmentedButton(master=frame_1, values=["CTkSegmentedButton", "Value 2"])
-segmented_button_1.pack(pady=10, padx=10)
-
-tabview_1 = customtkinter.CTkTabview(master=frame_1, width=200, height=70)
-tabview_1.pack(pady=10, padx=10)
-tabview_1.add("CTkTabview")
-tabview_1.add("Tab 2")
-
-app.mainloop()
+mainWindow.mainloop()

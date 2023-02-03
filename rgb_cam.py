@@ -1,12 +1,16 @@
 import cv2
 from PIL import Image
 
+
 class Camera():
     def __init__(self):
+        self.cap = None
         self.width, self.height = 800,600
+        self.open = False
 
     def open_camera(self):
-
+        self.open = True
+        self.release_camera()
         self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
@@ -18,24 +22,25 @@ class Camera():
         # cap.set(28, focus)
         self.cap.set(cv2.CAP_PROP_FOCUS, focus)
         self.cap.set(cv2.CAP_PROP_EXPOSURE, -7)
+        self.get_frame()
 
     def get_frame(self):
-        try:
-            s, frame = self.cap.read()
-            if s:  # frame captures without errors...
-                img = Image.fromarray(frame[:, :, ::-1])
 
-                return img
+        s, frame = self.cap.read()
+        if s:  # frame captures without errors...
+            img = Image.fromarray(frame[:, :, ::-1])
 
-        except AttributeError:
-            1
-
+            return img
 
 
 
     def release_camera(self):
-        try:
+        self.cap = False
+       # print('cloooooose')
+       # try:
+        if self.cap:
             self.cap.release()
-            self.cap = None
-        except AttributeError:
-            None
+
+        # except AttributeError:
+
+

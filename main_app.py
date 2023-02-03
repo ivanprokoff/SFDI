@@ -19,7 +19,7 @@ class App(customtkinter.CTk):
         # configure window
         self.title("CustomTkinter complex_example.py")
         self.geometry(f"{1100}x{580}")
-
+        self.camera = Camera()
         self.projection_window = Projection()
         # configure grid layout (4x4)
         self.grid_columnconfigure(1, weight=1)
@@ -33,26 +33,24 @@ class App(customtkinter.CTk):
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame, text="CustomTkinter",
                                                  font=customtkinter.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
-        self.sidebar_button_1 = customtkinter.CTkButton(self.sidebar_frame, command=lambda: [self.camera.release_camera(), self.image_change()],
+        self.sidebar_button_1 = customtkinter.CTkButton(self.sidebar_frame,
+                                                        command=lambda: [self.camera.release_camera , self.image_change()],
                                                         text='Projection')
         self.sidebar_button_1.grid(row=1, column=0, padx=20, pady=10)
-        self.sidebar_button_2 = customtkinter.CTkButton(self.sidebar_frame, command=lambda: [self.camera.open_camera(), self.translate_cam()], text='cam')
+
+        self.sidebar_button_2 = customtkinter.CTkButton(self.sidebar_frame, command=lambda: [self.camera.open_camera(),
+                                                                                             self.translate_cam()],
+                                                        text='cam')
         self.sidebar_button_2.grid(row=2, column=0, padx=20, pady=10)
-        self.sidebar_button_3 = customtkinter.CTkButton(self.sidebar_frame, command=self.sidebar_button_event)
+
+        self.sidebar_button_3 = customtkinter.CTkButton(self.sidebar_frame, command=self.camera.release_camera,
+                                                        text='close_camera')
+
         self.sidebar_button_3.grid(row=3, column=0, padx=20, pady=10)
+
         self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
         self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(10, 0))
-        # self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame, values=["Light", "Dark", "System"],
-        #                                                                command=self.change_appearance_mode_event)
-        # self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
-        # self.scaling_label = customtkinter.CTkLabel(self.sidebar_frame, text="UI Scaling:", anchor="w")
-        # self.scaling_label.grid(row=7, column=0, padx=20, pady=(10, 0))
-        # self.scaling_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame,
-        #                                                        values=["80%", "90%", "100%", "110%", "120%"],
-        #                                                        command=self.change_scaling_event)
-        # self.scaling_optionemenu.grid(row=8, column=0, padx=20, pady=(10, 20))
 
-        # create main entry and button
         self.entry = customtkinter.CTkEntry(self, placeholder_text="CTkEntry")
         self.entry.grid(row=3, column=1, columnspan=2, padx=(20, 0), pady=(20, 20), sticky="nsew")
 
@@ -60,16 +58,11 @@ class App(customtkinter.CTk):
                                                      text_color=("gray10", "#DCE4EE"))
         self.main_button_1.grid(row=3, column=3, padx=(20, 20), pady=(20, 20), sticky="nsew")
 
-
-
-        self.camera = Camera()
-
-        self.open_cam = True
-        self.pattern_copy = customtkinter.CTkLabel(self, image=self.projection_window.pattern_window.cget("image"),
+        self.pattern_copy = customtkinter.CTkLabel(self, image=None,
+                                                   # self.projection_window.pattern_window.cget("image"),
                                                    text='')
+
         self.pattern_copy.grid(row=0, column=1, padx=(20, 0), pady=(20, 0))
-
-
 
         # create tabview
         self.tabview = customtkinter.CTkTabview(self, width=250)
@@ -110,17 +103,17 @@ class App(customtkinter.CTk):
         # self.file = Button(self, text='Browse', command=self.choose)
 
         # create checkbox and switch frame
-        self.checkbox_slider_frame = customtkinter.CTkFrame(self)
-        self.checkbox_slider_frame.grid(row=1, column=3, padx=(20, 20), pady=(20, 0), sticky="nsew")
-        self.checkbox_1 = customtkinter.CTkCheckBox(master=self.checkbox_slider_frame)
-        self.checkbox_1.grid(row=1, column=0, pady=(20, 10), padx=20, sticky="n")
-        self.checkbox_2 = customtkinter.CTkCheckBox(master=self.checkbox_slider_frame)
-        self.checkbox_2.grid(row=2, column=0, pady=10, padx=20, sticky="n")
-        self.switch_1 = customtkinter.CTkSwitch(master=self.checkbox_slider_frame,
-                                                command=lambda: print("switch 1 toggle"))
-        self.switch_1.grid(row=3, column=0, pady=10, padx=20, sticky="n")
-        self.switch_2 = customtkinter.CTkSwitch(master=self.checkbox_slider_frame)
-        self.switch_2.grid(row=4, column=0, pady=(10, 20), padx=20, sticky="n")
+        # self.checkbox_slider_frame = customtkinter.CTkFrame(self)
+        # self.checkbox_slider_frame.grid(row=1, column=3, padx=(20, 20), pady=(20, 0), sticky="nsew")
+        # self.checkbox_1 = customtkinter.CTkCheckBox(master=self.checkbox_slider_frame)
+        # self.checkbox_1.grid(row=1, column=0, pady=(20, 10), padx=20, sticky="n")
+        # self.checkbox_2 = customtkinter.CTkCheckBox(master=self.checkbox_slider_frame)
+        # self.checkbox_2.grid(row=2, column=0, pady=10, padx=20, sticky="n")
+        # self.switch_1 = customtkinter.CTkSwitch(master=self.checkbox_slider_frame,
+        #                                         command=lambda: print("switch 1 toggle"))
+        # self.switch_1.grid(row=3, column=0, pady=10, padx=20, sticky="n")
+        # self.switch_2 = customtkinter.CTkSwitch(master=self.checkbox_slider_frame)
+        # self.switch_2.grid(row=4, column=0, pady=(10, 20), padx=20, sticky="n")
 
         # create slider and progressbar frame
         self.slider_progressbar_frame = customtkinter.CTkFrame(self, fg_color="transparent")
@@ -135,12 +128,12 @@ class App(customtkinter.CTk):
         self.progressbar.set(0)
 
         # set default values
-        self.sidebar_button_3.configure(state="disabled", text="Disabled CTkButton")
-        self.checkbox_2.configure(state="disabled")
-        self.switch_2.configure(state="disabled")
-        self.checkbox_1.select()
-        self.switch_1.select()
-        self.radio_button_3.configure(state="disabled")
+        # self.sidebar_button_3.configure(state="disabled", text="Disabled CTkButton")
+   #     self.checkbox_2.configure(state="disabled")
+   #      self.switch_2.configure(state="disabled")
+   #     self.checkbox_1.select()
+   #     self.switch_1.select()
+   #     self.radio_button_3.configure(state="disabled")
 
         # self.scaling_optionemenu.set("100%")
         self.optionmenu_1.set("CTkOptionmenu")
@@ -168,14 +161,18 @@ class App(customtkinter.CTk):
         print("sidebar_button click")
 
     def translate_cam(self):
-        if self.open_cam:
-            img = customtkinter.CTkImage(self.camera.get_frame(), size=(500, 500))
-            self.pattern_copy.configure(image=img, text=self.progressbar.get())
-            self.projection_window.pattern_window.after(1, self.translate_cam)
-        else:
-            self.camera.release_camera()
-    def image_change(self, clock=1, color='red'):
 
+
+
+        if self.camera.cap:
+            img = customtkinter.CTkImage(self.camera.get_frame(), size=(500, 500))
+
+            self.pattern_copy['image'] = img
+            self.pattern_copy.configure(image=img, text='0')
+            self.projection_window.pattern_window.after(10, self.translate_cam)
+
+
+    def image_change(self, clock=1, color='red'):
         freqs = list(self.projection_window.patterns[color].keys())
         # self.progressbar.set(0)
         if clock < 5:
@@ -189,8 +186,8 @@ class App(customtkinter.CTk):
             self.progressbar.step()
             clock += 1
             self.projection_window.pattern_window.after(100, self.image_change, clock)
-        else:
-            self.open_cam = False
+
+
 
 if __name__ == "__main__":
     app = App()
