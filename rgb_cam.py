@@ -35,7 +35,7 @@ class Camera():
 
 
     def release_camera(self):
-        self.cap = False
+        #self.cap = False
        # print('cloooooose')
        # try:
         if self.cap:

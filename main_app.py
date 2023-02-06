@@ -3,11 +3,13 @@ import tkinter.messagebox
 import customtkinter
 import numpy as np
 from patterns_init import read_patterns
-from PIL import ImageTk
+from PIL import ImageEnhance
 import projection_func as pf
+from PIL import Image as I
+
 from projection import Projection
 from rgb_cam import Camera
-
+from thorcam import Thorcam
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
@@ -19,7 +21,10 @@ class App(customtkinter.CTk):
         # configure window
         self.title("CustomTkinter complex_example.py")
         self.geometry(f"{1100}x{580}")
+
         self.camera = Camera()
+        self.thor_camera = Thorcam()
+
         self.projection_window = Projection()
         # configure grid layout (4x4)
         self.grid_columnconfigure(1, weight=1)
@@ -34,12 +39,12 @@ class App(customtkinter.CTk):
                                                  font=customtkinter.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
         self.sidebar_button_1 = customtkinter.CTkButton(self.sidebar_frame,
-                                                        command=lambda: [self.camera.release_camera , self.image_change()],
+                                                        command=lambda: [self.camera.release_camera() , self.image_change()],
                                                         text='Projection')
         self.sidebar_button_1.grid(row=1, column=0, padx=20, pady=10)
 
         self.sidebar_button_2 = customtkinter.CTkButton(self.sidebar_frame, command=lambda: [self.camera.open_camera(),
-                                                                                             self.translate_cam()],
+                                                                                             self.translate_rgb_cam()],
                                                         text='cam')
         self.sidebar_button_2.grid(row=2, column=0, padx=20, pady=10)
 
@@ -48,8 +53,19 @@ class App(customtkinter.CTk):
 
         self.sidebar_button_3.grid(row=3, column=0, padx=20, pady=10)
 
+        self.sidebar_button_4 = customtkinter.CTkButton(self.sidebar_frame, command=lambda: [self.thor_camera.open_camera(),
+                                                                                             self.translate_thor_cam()],
+                                                        text='thor_camera')
+
+        self.sidebar_button_4.grid(row=4, column=0, padx=20, pady=10)
+
+        self.sidebar_button_5 = customtkinter.CTkButton(self.sidebar_frame, command=self.thor_camera.release_camera,
+                                                        text='close_thor_camera')
+
+        self.sidebar_button_5.grid(row=5, column=0, padx=20, pady=10)
+
         self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
-        self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(10, 0))
+        self.appearance_mode_label.grid(row=6, column=0, padx=20, pady=(10, 0))
 
         self.entry = customtkinter.CTkEntry(self, placeholder_text="CTkEntry")
         self.entry.grid(row=3, column=1, columnspan=2, padx=(20, 0), pady=(20, 20), sticky="nsew")
@@ -160,24 +176,41 @@ class App(customtkinter.CTk):
     def sidebar_button_event(self):
         print("sidebar_button click")
 
-    def translate_cam(self):
-
-
+    def translate_rgb_cam(self):
 
         if self.camera.cap:
-            img = customtkinter.CTkImage(self.camera.get_frame(), size=(500, 500))
+            raw_img = self.camera.get_frame()
+            if raw_img is not None:
+                img = customtkinter.CTkImage(raw_img, size=(500, 500))
 
-            self.pattern_copy['image'] = img
-            self.pattern_copy.configure(image=img, text='0')
-            self.projection_window.pattern_window.after(10, self.translate_cam)
+                self.pattern_copy['image'] = img
+                self.pattern_copy.configure(image=img, text='0')
+                self.projection_window.pattern_window.after(10, self.translate_rgb_cam)
 
+    def translate_thor_cam(self):
+
+        if self.thor_camera.cam:
+            raw_img = self.thor_camera.get_frame()
+            if raw_img is not None:
+                img = Image.fromarray(raw_img)
+                img = customtkinter.CTkImage(img, size=(500, 500))
+
+                self.pattern_copy['image'] = img
+                self.pattern_copy.configure(image=img, text='0')
+                self.projection_window.pattern_window.after(10, self.translate_thor_cam)
 
     def image_change(self, clock=1, color='red'):
+
         freqs = list(self.projection_window.patterns[color].keys())
         # self.progressbar.set(0)
         if clock < 5:
             i = clock
-            img = customtkinter.CTkImage(self.projection_window.patterns[color][freqs[i]], size=(500, 500))
+            with I.open(self.projection_window.patterns[color][freqs[i]][0]) as im:
+                enhancer = ImageEnhance.Brightness(im)
+
+                # gives original image
+                img = enhancer.enhance(self.projection_window.patterns['red']['01_1'][1])
+            img = customtkinter.CTkImage(img, size=(1000, 1000))
 
             self.projection_window.pattern_window['image'] = img
             self.projection_window.pattern_window['text'] = i
@@ -185,8 +218,7 @@ class App(customtkinter.CTk):
             self.pattern_copy.configure(image=img, text=self.progressbar.get())
             self.progressbar.step()
             clock += 1
-            self.projection_window.pattern_window.after(100, self.image_change, clock)
-
+            self.projection_window.pattern_window.after(10, self.image_change, clock)
 
 
 if __name__ == "__main__":
