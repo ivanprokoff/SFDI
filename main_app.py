@@ -72,7 +72,7 @@ class App(customtkinter.CTk):
                                                                    self.thor_camera.open_camera(),
                                                                    self.translate_thor_cam()],
                                       close_commands=lambda *args: [self.thor_button.change_function(),
-                                                                    self.thor_camera.release_camera])
+                                                                    self.thor_camera.release_camera()])
 
         self.thor_button.grid(row=3, column=0, padx=20, pady=10)
 
@@ -88,10 +88,10 @@ class App(customtkinter.CTk):
         #
         # self.sidebar_button_4.grid(row=4, column=0, padx=20, pady=10)
         #
-        # self.sidebar_button_5 = customtkinter.CTkButton(self.sidebar_frame, command=self.thor_camera.release_camera,
-        #                                                 text='close_thor_camera')
-        #
-        # self.sidebar_button_5.grid(row=5, column=0, padx=20, pady=10)
+        self.sidebar_button_5 = customtkinter.CTkButton(self.sidebar_frame, command=self.thor_camera.release_camera,
+                                                        text='close_thor_camera')
+
+        self.sidebar_button_5.grid(row=5, column=0, padx=20, pady=10)
 
         self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
         self.appearance_mode_label.grid(row=6, column=0, padx=20, pady=(10, 0))
@@ -191,6 +191,9 @@ class App(customtkinter.CTk):
 
     def translate_rgb_cam(self):
 
+        if self.thor_camera.open:
+            self.thor_camera.release_camera()
+
         if self.camera.cap:
             raw_img = self.camera.get_frame()
             if raw_img is not None:
@@ -207,7 +210,9 @@ class App(customtkinter.CTk):
 
     def translate_thor_cam(self):
 
-        if self.thor_camera.cam:
+        # if self.thor_camera.cam:
+        #     self.thor_camera.release_camera()
+        if self.thor_camera.open:
             raw_img = self.thor_camera.get_frame()
             if raw_img is not None:
                 img = I.fromarray(raw_img)
@@ -215,11 +220,11 @@ class App(customtkinter.CTk):
 
                 self.pattern_copy['image'] = img
                 self.pattern_copy.configure(image=img)
-                self.projection_window.pattern_window.after(10, self.translate_thor_cam)
-            else:
-                black_image = I.new('RGB', (500, 500))
-                img = customtkinter.CTkImage(black_image, size=(500, 500))
-                self.pattern_copy.configure(image=img)
+                self.projection_window.pattern_window.after(15, self.translate_thor_cam)
+        else:
+            black_image = I.new('RGB', (500, 500))
+            img = customtkinter.CTkImage(black_image, size=(500, 500))
+            self.pattern_copy.configure(image=img)
 
     def image_change(self, clock=1, color='red'):
         self.sidebar_button_1.configure(text='pressed')
