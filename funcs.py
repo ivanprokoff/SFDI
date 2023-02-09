@@ -1,9 +1,9 @@
 def create_directory():
 
 
-    date=date_var.get()
+    date = date_var.get()
 
-    path='C:/Users/madpl/Documents/sfdi/data
+    path = 'C:/Users/madpl/Documents/sfdi/data
 
 def create_directory_photo():
     date = date_var.get()
