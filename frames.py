@@ -10,9 +10,10 @@ class Sidebar(customtkinter.CTkFrame):
 
         self.patient_entry = customtkinter.CTkEntry(self, justify='center')
         self.patient_entry.grid(row=0, column=0, padx=20, pady=10)
-
+        self.patient_entry.insert(0, 'test')
         self.folder_button = customtkinter.CTkButton(self,
-                                                     command=lambda *args: create_patient_directory(self.patient_entry.get()),
+                                                     command=lambda *args: create_patient_directory(
+                                                         self.patient_entry.get()),
                                                      text='Create directory')
 
         self.folder_button.grid(row=0, column=1, padx=10, pady=10)
@@ -36,8 +37,8 @@ class Sidebar(customtkinter.CTkFrame):
         self.thor_button = Button(self)
         self.thor_button.set_commands(open_text='open Thor camera', close_text='close Thor camera',
                                       open_commands=lambda *args: [self.thor_button.change_function(),
-                                                                   parent.thor_camera.open_camera(),
-                                                                   parent.translate_thor_cam()],
+                                                                   parent.thor_camera.open_camera()],
+                                                                   #parent.translate_thor_cam()],
                                       close_commands=lambda *args: [self.thor_button.change_function(),
                                                                     parent.thor_camera.release_camera()])
 
@@ -81,14 +82,28 @@ class TabWindow(customtkinter.CTkTabview):
         self.thor_photo_button = customtkinter.CTkButton(master=self.tab("Infrared"), fg_color="transparent",
                                                          text_color=("gray10", "#DCE4EE"), text='Take photo',
                                                          border_width=1,
-                                                         command=lambda: [parent.save_thor_image()])
+                                                         command=lambda *args: [
+                                                             create_patient_directory(parent.patient_entry.get()),
+                                                             parent.save_thor_image()])
 
         self.thor_photo_button.grid(row=3, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
 
-        self.add("Tab 2")
-        self.add("Tab 3")
-        # self.tabview.tab("CTkTabview").grid_columnconfigure(0, weight=1)  # configure grid of individual tabs
-        self.tab("Tab 2").grid_columnconfigure(0, weight=1)
+        self.add("Photo")
 
-        self.label_tab_2 = customtkinter.CTkLabel(self.tab("Tab 2"), text="CTkLabel on Tab 2")
-        self.label_tab_2.grid(row=0, column=0, padx=20, pady=20)
+        self.add("SFDI")
+
+        self.sfdi_button = customtkinter.CTkButton(master=self.tab("SFDI"), fg_color="transparent",
+                                                   text_color=("gray10", "#DCE4EE"), text='SFDI',
+                                                   command=lambda *arg: [create_patient_directory(parent.patient_entry.get()),
+                                                                         parent.renew_current_directory(),
+                                                                         parent.projection_window.set_first_picture(),
+
+
+                                                                         parent.begin_sfdi()],
+                                                   border_width=1)
+
+        # self.tabview.tab("CTkTabview").grid_columnconfigure(0, weight=1)  # configure grid of individual tabs
+        self.tab("SFDI").grid_columnconfigure(0, weight=1)
+        self.sfdi_button.grid(row=1, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
+        # self.label_tab_2 = customtkinter.CTkLabel(self.tab("Tab 2"), text="CTkLabel on Tab 2")
+        # self.label_tab_2.grid(row=0, column=0, padx=20, pady=20)

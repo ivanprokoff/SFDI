@@ -7,10 +7,11 @@ from PIL import ImageEnhance
 import projection_func as pf
 from PIL import Image as I
 from open_close_button import Button
-from projection import Projection
+from projection import Projection, read_patterns_paths
 from rgb_cam import Camera
 from thorcam import Thorcam
 from frames import Sidebar, Translation, TabWindow
+
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
@@ -20,13 +21,17 @@ class App(customtkinter.CTk):
         super().__init__()
 
         # configure window
+
+        self.curret_directory = None
         self.title("Clinical app")
+        self.patterns = read_patterns_paths()
+        self.iter_patterns = iter(self.patterns)
 
-        self.geometry('%dx%d+%d+%d' % (1520, 800, 0, 0))
+        self.geometry('%dx%d+%d+%d' % (1520, 400, 0, 0))
         self.camera = Camera()
-        self.thor_camera = Thorcam()
+        self.thor_camera = Thorcam(self)
 
-        self.projection_window = Projection()
+        self.projection_window = Projection(self)
 
         """
         SIDEBAR FRAME
@@ -35,9 +40,8 @@ class App(customtkinter.CTk):
         container.grid(row=0, column=0, rowspan=4, columnspan=2, pady=50, padx=10, sticky="nsew")
 
         self.sidebar_frame = Sidebar(self, container)
+        self.patient_entry = self.sidebar_frame.patient_entry
         self.sidebar_frame.grid(row=0, column=0)
-
-
 
         """
         Central frame
@@ -49,7 +53,6 @@ class App(customtkinter.CTk):
         self.translation_frame.grid(row=0, column=0)
         self.pattern_copy = self.translation_frame.pattern_copy
 
-
         """
         TAB frame
         """
@@ -59,7 +62,6 @@ class App(customtkinter.CTk):
 
         self.tabview = TabWindow(self, container)
         self.tabview.grid(row=0, column=0)
-
 
     def translate_rgb_cam(self):
 
@@ -79,6 +81,9 @@ class App(customtkinter.CTk):
                 black_image = I.new('RGB', (800, 600))
                 img = customtkinter.CTkImage(black_image, size=(800, 600))
                 self.pattern_copy.configure(image=img)
+
+    def renew_current_directory(self):
+        self.curret_directory = external_functions.return_current_directory(self.patient_entry.get())
 
     def save_thor_image(self, filename=''):
         if self.thor_camera.open:
@@ -104,25 +109,64 @@ class App(customtkinter.CTk):
             img = customtkinter.CTkImage(black_image, size=(800, 600))
             self.pattern_copy.configure(image=img)
 
-    def image_change(self, clock=1, color='red'):
-       # self.sidebar_button_1.configure(text='pressed')
-        freqs = list(self.projection_window.patterns[color].keys())
-        if clock < 10:
-            i = clock
-            with I.open(self.projection_window.patterns[color][freqs[i]][0]) as im:
+    def create_iter_patterns(self):
+
+        self.iter_patterns = iter(self.patterns)
+
+    def image_change(self, clock=1, color='blue'):
+        # self.sidebar_button_1.configure(text='pressed')
+        try:
+            img_name = self.patterns[next(self.iter_patterns)]
+            with I.open(img_name[0]) as im:
                 enhancer = ImageEnhance.Brightness(im)
 
                 # gives original image
-                img = enhancer.enhance(self.projection_window.patterns['red']['01_1'][1])
+                img = enhancer.enhance(img_name[1])
+
+            tk_img = customtkinter.CTkImage(img, size=(800, 600))
+            self.pattern_copy.configure(image=tk_img)
+            #self.projection_window.pattern_window['image'] = img
+            tk_img = customtkinter.CTkImage(img, size=(1000, 800))
+            self.projection_window.pattern_window.configure(image=tk_img)
+
+
+            self.after(10, self.image_change)
+
+        except StopIteration:
+            self.create_iter_patterns()
+
+    def begin_sfdi(self):
+
+        try:
+            iteration = next(self.iter_patterns)
+            img_name = self.patterns[iteration]
+            with I.open(img_name[0]) as im:
+                enhancer = ImageEnhance.Brightness(im)
+
+                # gives original image
+                img = enhancer.enhance(img_name[1])
             img = customtkinter.CTkImage(img, size=(800, 600))
 
-            self.projection_window.pattern_window['image'] = img
-            self.projection_window.pattern_window['text'] = i
+            #self.projection_window.pattern_window['image'] = img
+            self.after(50)
             self.projection_window.pattern_window.configure(image=img)
-            self.pattern_copy.configure(image=img)
+            #self.pattern_copy.configure(image=img)
 
-            clock += 1
-            self.projection_window.pattern_window.after(10, self.image_change, clock)
+            raw_img = self.thor_camera.get_frame()
+
+            if raw_img is not None:
+                thor_img = I.fromarray(raw_img)
+                tk_thor_img = customtkinter.CTkImage(thor_img, size=(800, 600))
+                #
+
+                file_name = f'{self.curret_directory}/SFDI/{iteration[0]}/{iteration[1]}.TIF'
+
+                thor_img.save(file_name)
+                self.pattern_copy.configure(image=tk_thor_img)
+            self.after(100, self.begin_sfdi)
+
+        except StopIteration:
+            self.create_iter_patterns()
 
 
 if __name__ == "__main__":

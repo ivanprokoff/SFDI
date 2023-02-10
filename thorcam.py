@@ -1,16 +1,18 @@
 import pylablib as pll
 from pylablib.devices import Thorlabs
-
+import customtkinter
 pll.par["devices/dlls/thorlabs_tlcam"] = "path/to/dlls"
 
 
 class Thorcam():
-    def __init__(self, exposure=200 /1000):
+    def __init__(self, parent, exposure=66.68 / 1000):
         self.cam = None
         self.open = False
         #self.width, self.height = 800, 600
         #self.open = False
         self.exposure = exposure
+
+        self.parent = parent
 
     def open_camera(self):
         self.release_camera()
@@ -25,6 +27,7 @@ class Thorcam():
     def get_frame(self):
 
         self.cam.send_software_trigger()
+        self.parent.after(50)
         self.cam.wait_for_frame(since='lastwait', nframes=1)
         img = self.cam.read_newest_image()
 

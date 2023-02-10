@@ -24,8 +24,8 @@ def read_patterns(colors=['red', 'green', 'blue'], factors=[0.4, 0.6, 1],
 
                 # gives original image
                 im_output = enhancer.enhance(factor)
-                patterns_dict[color][name] = im_output
-        return patterns_dict
+                patterns_dict[color, name] = im_output
+        return iter(patterns_dict)
 
 
 def read_patterns_paths(colors=['red', 'green', 'blue'], factors=[0.4, 0.6, 1],
