@@ -43,11 +43,11 @@ class Projection(customtkinter.CTkToplevel):
         screen_height = self.winfo_screenheight()
         self.parent = parent
         # calculate position x and y coordinates
-        x = 1800
+        x = 2000
         y = 0#(screen_height / 2) - (screen_height / 2)
         #self.geometry('%dx%d+%d+%d' % (screen_width, screen_height, x, y))
-        self.state('zoomed')
-        self.geometry('%dx%d+%d+%d' % (1400, 1700, x, y))
+        #self.state('zoomed')
+        self.geometry('%dx%d+%d+%d' % (1500, 1700, x, y))
         # with I.open(self.patterns['red', '01_1'][0]) as im:
         #     enhancer = ImageEnhance.Brightness(im)
         #
@@ -59,16 +59,23 @@ class Projection(customtkinter.CTkToplevel):
 
         self.pattern_window.grid(row=0, column=1)
 
+
     def set_first_picture(self):
         img_name = list(self.parent.patterns.values())[0]
+
         with I.open(img_name[0]) as im:
             enhancer = ImageEnhance.Brightness(im)
 
                 # gives original image
             img = enhancer.enhance(img_name[1])
 
-        tk_img = customtkinter.CTkImage(img)
+        tk_img = customtkinter.CTkImage(img, size=(1200, 900))
         self.pattern_window.configure(image=tk_img)
+        self.parent.pattern_copy.configure(tk_img)
+        self.pattern_window.update()
+
+        self.after(50)
+
 
 if __name__ == "__main__":
 

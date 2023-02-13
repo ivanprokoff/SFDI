@@ -21,14 +21,14 @@ class Thorcam():
 
         self.cam.set_exposure(self.exposure)
         self.cam.set_trigger_mode('int')
-        self.cam.start_acquisition(auto_start=False, nframes=1, frames_per_trigger=1)
+        #self.cam
 
 
     def get_frame(self):
 
         self.cam.send_software_trigger()
-        self.parent.after(50)
-        self.cam.wait_for_frame(since='lastwait', nframes=1)
+        self.parent.projection_window.after(90)
+        self.cam.wait_for_frame(since='lastread', nframes=1)
         img = self.cam.read_newest_image()
 
         return img

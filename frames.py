@@ -17,10 +17,13 @@ class Sidebar(customtkinter.CTkFrame):
                                                      text='Create directory')
 
         self.folder_button.grid(row=0, column=1, padx=10, pady=10)
+        self.white_image = I.new('RGB', (800, 600), (155, 155, 155))
+        self.img2 = customtkinter.CTkImage(self.white_image, size=(800, 600))
 
         self.sidebar_button_1 = customtkinter.CTkButton(self,
-                                                        command=lambda: [parent.camera.release_camera(),
-                                                                         parent.image_change()],
+                                                        command=lambda *args: [
+                                                            parent.camera.release_camera(),
+                                                            parent.image_change()],
                                                         text='Projection')
 
         self.sidebar_button_1.grid(row=1, column=1, padx=20, pady=10)
@@ -38,7 +41,7 @@ class Sidebar(customtkinter.CTkFrame):
         self.thor_button.set_commands(open_text='open Thor camera', close_text='close Thor camera',
                                       open_commands=lambda *args: [self.thor_button.change_function(),
                                                                    parent.thor_camera.open_camera()],
-                                                                   #parent.translate_thor_cam()],
+                                      # parent.translate_thor_cam()],
                                       close_commands=lambda *args: [self.thor_button.change_function(),
                                                                     parent.thor_camera.release_camera()])
 
@@ -94,12 +97,12 @@ class TabWindow(customtkinter.CTkTabview):
 
         self.sfdi_button = customtkinter.CTkButton(master=self.tab("SFDI"), fg_color="transparent",
                                                    text_color=("gray10", "#DCE4EE"), text='SFDI',
-                                                   command=lambda *arg: [create_patient_directory(parent.patient_entry.get()),
-                                                                         parent.renew_current_directory(),
-                                                                         parent.projection_window.set_first_picture(),
+                                                   command=lambda *arg: [
+                                                       create_patient_directory(parent.patient_entry.get()),
+                                                       parent.renew_current_directory(),
+                                                       #parent.projection_window.set_first_picture(),
 
-
-                                                                         parent.begin_sfdi()],
+                                                       parent.begin_sfdi()],
                                                    border_width=1)
 
         # self.tabview.tab("CTkTabview").grid_columnconfigure(0, weight=1)  # configure grid of individual tabs

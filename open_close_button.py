@@ -24,6 +24,10 @@ class Button(customtkinter.CTkButton):
         if self.state == 'Closed':
             self.configure(self, command=self.open_commands, text=self.open_text)
             self.state = 'Open'
+
+            #self.configure(fg_color=['#3a7ebf', '#1f538d'], border_width=0)
         else:
             self.configure(self, command=self.close_commands, text=self.close_text)
             self.state = 'Closed'
+
+           # self.configure(fg_color="transparent", border_width=1)
