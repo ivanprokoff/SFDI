@@ -7,7 +7,7 @@ class Button(customtkinter.CTkButton):
         super().__init__(*args, **kwargs)
 
         self.open_text = None
-        self.state = 'Opened'
+        self.state = 'Closed'
         self.close_text = None
         self.open_commands = None
         self.close_commands = None

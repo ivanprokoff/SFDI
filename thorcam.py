@@ -7,12 +7,13 @@ pll.par["devices/dlls/thorlabs_tlcam"] = "path/to/dlls"
 class Thorcam():
     def __init__(self, parent, exposure=66.68 / 1000):
         self.cam = None
-        self.open = False
+
         #self.width, self.height = 800, 600
-        #self.open = False
+        self.open = True
         self.exposure = exposure
 
         self.parent = parent
+        self.open_camera()
 
     def open_camera(self):
         self.release_camera()
@@ -21,11 +22,10 @@ class Thorcam():
 
         self.cam.set_exposure(self.exposure)
         self.cam.set_trigger_mode('int')
-        #self.cam
+
 
 
     def get_frame(self):
-
         self.cam.send_software_trigger()
         self.parent.projection_window.after(90)
         self.cam.wait_for_frame(since='lastread', nframes=1)
