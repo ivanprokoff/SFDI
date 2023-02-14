@@ -5,22 +5,27 @@ pll.par["devices/dlls/thorlabs_tlcam"] = "path/to/dlls"
 
 
 class Thorcam():
-    def __init__(self, parent, exposure=66.68 / 1000):
+    def __init__(self, parent):
         self.cam = None
 
         #self.width, self.height = 800, 600
         self.open = True
-        self.exposure = exposure
+
 
         self.parent = parent
-        self.open_camera()
+        try:
+            self.open_camera()
+        except:
+            1
+
 
     def open_camera(self):
         self.release_camera()
         self.open = True
+
         self.cam = Thorlabs.ThorlabsTLCamera(serial='11354')
 
-        self.cam.set_exposure(self.exposure)
+        self.cam.set_exposure(self.parent.exposure)
         self.cam.set_trigger_mode('int')
 
 
