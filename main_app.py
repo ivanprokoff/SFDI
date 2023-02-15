@@ -1,5 +1,5 @@
 import tkinter as tk
-import tkinter.messagebox
+import cv2
 import customtkinter
 import numpy as np
 import os.path
@@ -24,7 +24,8 @@ class App(customtkinter.CTk):
         super().__init__()
 
         # configure window
-        self.bind('<Escape>', lambda *args: [self.stop(), self.destroy()])
+        self.animation = True
+        self.bind('<Escape>', lambda *args: [self.animation_stop(), sys.exit(1)])
         self.flag = True
         self.first_frame = True
         self.current_directory = None
@@ -32,17 +33,17 @@ class App(customtkinter.CTk):
         self.patterns = read_patterns_paths()
         self.iter_patterns = iter(self.patterns)
         self.exposure = 66.68 / 1000
-        self.geometry('%dx%d+%d+%d' % (1520, 600, 0, 0))
+        self.geometry('%dx%d+%d+%d' % (1520, 700, 0, 0))
         self.camera = Camera()
         self.thor_camera = Thorcam(self)
 
         """
         SIDEBAR FRAME
         """
-        container = customtkinter.CTkFrame(self, width=80, height=1, corner_radius=0,border_width=1,border_color='white')
+        container = customtkinter.CTkFrame(self, width=80, height=1, corner_radius=0, border_width=1, border_color='white')
 
 
-        container.grid(row=0, column=0, rowspan=1, columnspan=1, pady=[50,10], padx=[10,4],sticky = 'NW')
+        container.grid(row=0, column=0, rowspan=1, columnspan=1, pady=[50,10], padx=20,sticky = 'NW')
 
         self.sidebar_frame = Sidebar(self, container)
         self.patient_entry = self.sidebar_frame.patient_entry
@@ -52,7 +53,7 @@ class App(customtkinter.CTk):
           Log_frame
         """
         container = customtkinter.CTkFrame(self, width=40, height=1, corner_radius=0)
-        container.grid(row=1, column=2, rowspan=1, columnspan=1, pady=[10, 10], padx=[10,4], sticky='nswe')
+        container.grid(row=1, column=2, rowspan=1, columnspan=1, pady=[10, 10], padx=20, sticky='nswe')
 
         self.log_frame = Log_Window(self, container)
         self.text_box = self.log_frame.textbox
@@ -62,7 +63,7 @@ class App(customtkinter.CTk):
         Central frame
         """
         container_center = customtkinter.CTkFrame(self, width=90, height=100, border_color='white', border_width=1)
-        container_center.grid(row=0, column=4, rowspan=5, columnspan=1, pady=50, padx=10, sticky="NW")
+        container_center.grid(row=0, column=4, rowspan=5, columnspan=1, pady=50, padx=20, sticky="NW")
 
         self.translation_frame = Translation(self, container_center)
         self.translation_frame.grid(row=0, column=0, rowspan=10)
@@ -71,11 +72,12 @@ class App(customtkinter.CTk):
         """
         TAB frame
         """
-        self.tab_frame = customtkinter.CTkFrame(self, width=30, height=1, corner_radius=0, border_width=1,border_color='white')
+        self.tab_frame = customtkinter.CTkFrame(self, width=30, height=1, corner_radius=0, border_width=1,
+                                                border_color='white')
         self.tab_frame.grid(row=0, column=2, padx=10, pady=(40, 0), columnspan=1, sticky="NW")
 
         container = customtkinter.CTkTabview(self.tab_frame, width=40, height=10)
-        container.grid(row=0, column=0, padx=10, pady=(0, 0), sticky="NseW")
+        container.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="NseW")
 
         self.tabview = TabWindow(self, container)
         self.tabview.grid(row=0, column=0,columnspan=2)
@@ -97,23 +99,47 @@ class App(customtkinter.CTk):
            # line = f'{current_time}      {self.infrared_name_entry.get()} Photo_taken'
             line = f'{current_time}      {args}'
             self.text_box.insert('0.0', line+'\n')
+        if command == 'RGB':
+
+            line = f'{current_time}      {args}'
+            self.text_box.insert('0.0', line+'\n')
+        if command == 'Directory':
+            line = f'{current_time}      {self.patient_entry.get()} directory created'
+            self.text_box.insert('0.0', line + '\n')
+        if command == 'Predict':
+            line = f'{current_time}      {self.patient_entry.get()} {args}'
+            self.text_box.insert('0.0', line + '\n')
+
+
+
 
 
     def translate_rgb_cam(self):
+
         self.flag = True
-        while self.flag and self.camera.cap:
-            raw_img = self.camera.get_frame()
-            if raw_img is not None:
-                img = customtkinter.CTkImage(raw_img, size=(1000, 700))
+        while self.animation and self.flag and self.camera.cap:
+
+            frame = self.camera.get_frame()
+
+            frame = cv2.flip(frame, 1)
+            frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+            frame = cv2.flip(frame, 0)
+            frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+
+            frame = frame[:, :, ::-1]
+
+            pil_img = I.fromarray(frame)
+
+            if frame is not None:
+                img = customtkinter.CTkImage(pil_img, size = (np.shape(pil_img)[1],np.shape(pil_img)[0]))
 
                 self.pattern_copy['image'] = img
                 self.pattern_copy.configure(image=img)
                 self.pattern_copy.update()
 
-
             else:
-                black_image = I.new('RGB', (800, 600))
-                img = customtkinter.CTkImage(black_image, size=(1000, 700))
+                black_image = I.new('RGB', (500, 500))
+                img = customtkinter.CTkImage(black_image, size=(500,500))
                 self.pattern_copy.configure(image=img)
             self.after(15)
 
@@ -137,17 +163,37 @@ class App(customtkinter.CTk):
 
                     break
 
+    def save_rgb_image(self, filename=''):
+        if self.camera.cap:
+            self.renew_current_directory()
+            img = self.camera.get_frame()
+            filename = f'{self.current_directory}/Photo/1.png'
+
+            for i in range(1, 10):
+
+                if os.path.isfile(filename):
+                    filename = filename[:-5]
+                    filename += f'{i}.png'
+                else:
+                    cv2.imwrite(filename, img)
+                    self.insert_log('RGB', filename[38:])
+
+                    break
 
     def translate_thor_cam(self):
 
         self.flag = True
         while self.flag and self.thor_camera.open:
-
             raw_img = self.thor_camera.get_frame()
             if raw_img is not None:
-                thor_img = I.fromarray(raw_img)
+                raw_img = raw_img.astype('float')[::2,::2].T
+                thor_img = I.fromarray(raw_img * 255 // 1023)
 
-                tk_thor_img = customtkinter.CTkImage(thor_img, size=(1000, 700))
+                tk_thor_img = customtkinter.CTkImage(thor_img, size = (np.shape(raw_img)[1],
+                                                                                np.shape(raw_img)[0]
+                                                                                )
+
+                                                     )
 
                 self.pattern_copy.configure(image=tk_thor_img)
 
@@ -155,10 +201,10 @@ class App(customtkinter.CTk):
 
             else:
                 print('else')
-                black_image = I.new('RGB', (800, 800))
-                img = customtkinter.CTkImage(black_image, size=(1000, 700))
+                black_image = I.new('RGB', (500, 500))
+                img = customtkinter.CTkImage(black_image, size=(500, 500))
                 self.pattern_copy.configure(image=img)
-            self.after(40)
+            self.after(30)
 
     def image_change(self, clock=1, color='blue'):
         # self.sidebar_button_1.configure(text='pressed')
@@ -188,7 +234,7 @@ class App(customtkinter.CTk):
                 self.first_frame = False
 
     def stop(self):
-        self.thor_camera.cam.stop_acquisition()
+        self.thor_camera.stop_acquisition()
         self.camera.release_camera()
         self.flag = False
 
@@ -198,7 +244,7 @@ class App(customtkinter.CTk):
         self.thor_camera.cam.start_acquisition(auto_start=False, nframes=1, frames_per_trigger=1)
         pattern_list = list(self.patterns.items())
         pattern_list = pattern_list+[pattern_list[-1]]
-        self.after(50)
+        self.after(40)
         self.flag = True
 
         for i, (key, img_name) in enumerate(pattern_list[:]):
@@ -209,24 +255,32 @@ class App(customtkinter.CTk):
                 # gives original image
                 img = enhancer.enhance(img_name[1])
 
-            img = customtkinter.CTkImage(img, size=(1000, 700))
+            img = customtkinter.CTkImage(img, size=(np.shape(img)[1], np.shape(img)[0]))
 
             self.projection_window.pattern_window['image'] = img
             self.projection_window.pattern_window.configure(image=img)
             self.projection_window.update()
 
-            self.after(50)
+            self.after(40)
 
-            raw_img = self.thor_camera.get_frame()
-
+            raw_img = self.thor_camera.get_frame().T
+            translation_img = raw_img.astype('float')[::2, ::2]*255//1023
             if raw_img is not None:
                 thor_img = I.fromarray(raw_img)
 
-                tk_thor_img = customtkinter.CTkImage(thor_img, size=(1000, 700))
+                tk_thor_img = customtkinter.CTkImage(I.fromarray(translation_img), size=(np.shape(translation_img)[1],
+                                                                                np.shape(translation_img)[0]))
+
                 file_name = f'{self.current_directory}/SFDI/{pattern_list[i-1][0][0]}/{pattern_list[i-1][0][1]}.TIF'
+
+                while os.path.isfile(file_name):
+                    self.patient_entry.insert('end', '_1')
+                    external_functions.create_patient_directory(self.patient_entry.get())
+                    self.renew_current_directory()
+                    file_name = f'{self.current_directory}/SFDI/{pattern_list[i - 1][0][0]}/{pattern_list[i - 1][0][1]}.TIF'
+
                 if i != 0:
                     thor_img.save(file_name)
-
 
 
                 self.pattern_copy.configure(image=tk_thor_img)
@@ -236,7 +290,9 @@ class App(customtkinter.CTk):
         self.thor_camera.cam.stop_acquisition()
 
 
+    def animation_stop(self):
 
+        self.animation = False
 
 
 if __name__ == "__main__":

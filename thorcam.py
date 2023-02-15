@@ -9,15 +9,12 @@ class Thorcam():
         self.cam = None
 
         #self.width, self.height = 800, 600
-        self.open = True
-
-
+        self.open = False
         self.parent = parent
-        try:
-            self.open_camera()
-        except:
-            1
-
+        # try:
+        #     #self.open_camera()
+        # except:
+        #     1
 
     def open_camera(self):
         self.release_camera()
@@ -32,7 +29,7 @@ class Thorcam():
 
     def get_frame(self):
         self.cam.send_software_trigger()
-        self.parent.projection_window.after(90)
+        self.parent.projection_window.after(80)
         self.cam.wait_for_frame(since='lastread', nframes=1)
         img = self.cam.read_newest_image()
 
@@ -49,4 +46,8 @@ class Thorcam():
         if self.cam:
             self.cam.close()
         self.open = False
+
+    def stop_acquisition(self):
+        if self.cam:
+            self.cam.stop_acquisition()
 

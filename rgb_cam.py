@@ -1,17 +1,18 @@
 import cv2
-from PIL import Image
+from PIL import Image as I
 
 
 class Camera():
     def __init__(self):
         self.cap = None
-        self.width, self.height = 800,600
+        self.width, self.height = 1920, 1080
         self.open = False
 
     def open_camera(self):
         self.open = True
         self.release_camera()
         self.cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+        print(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH), self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         self.cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
@@ -21,16 +22,16 @@ class Camera():
         # cap.set(4,720)
         # cap.set(28, focus)
         self.cap.set(cv2.CAP_PROP_FOCUS, focus)
-        self.cap.set(cv2.CAP_PROP_EXPOSURE, -0)
+        self.cap.set(cv2.CAP_PROP_EXPOSURE, -4)
         self.get_frame()
 
     def get_frame(self):
 
         s, frame = self.cap.read()
         if s:  # frame captures without errors...
-            img = Image.fromarray(frame[:, :, ::-1])
 
-            return img
+
+            return frame[:,:-800]
 
 
 

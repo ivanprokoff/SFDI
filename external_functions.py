@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+#import photo_pipeline_2
 
 
 def create_today_directory(main_path='C:/Users/madpl/clinic_data'):
@@ -37,3 +38,14 @@ def return_current_directory(patient_id, main_path='C:/Users/madpl/clinic_data')
     date = str(datetime.date(datetime.now()))
     folder_id = f'{main_path}/{date}/{patient_id}'
     return f'{main_path}/{date}/{patient_id}'
+
+def predict_hb(parent):
+    1
+    # parent.renew_current_directory()
+    # folder_photo = f'{parent.current_directory}/Photo'
+    #
+    # pred_dict = photo_pipeline_2.prediction_pipeline.pipeline_for_folder(folder_photo)
+    # print(folder_photo)
+    # print(pred_dict)
+    # args = 'Hb_level='+str(int(pred_dict[-1]['HB_GperL']))+'g/L'
+    # parent.insert_log('Predict', args)
