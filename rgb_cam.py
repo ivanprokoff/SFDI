@@ -3,26 +3,38 @@ from PIL import Image as I
 
 
 class Camera():
-    def __init__(self):
+    def __init__(self,parent):
         self.cap = None
         self.width, self.height = 1920, 1080
         self.open = False
+
+        self.open = True
+        self.release_camera()
+        self.cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+        self.cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
+
+        self.cap.set(cv2.CAP_PROP_SETTINGS, 1)
+
+        #parent.translate_rgb_cam()
 
     def open_camera(self):
         self.open = True
         self.release_camera()
         self.cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
-        print(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH), self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         self.cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
-
-        focus = 85  # min: 0, max: 255, increment:5
-        # cap.set(3,1080)
-        # cap.set(4,720)
-        # cap.set(28, focus)
-        self.cap.set(cv2.CAP_PROP_FOCUS, focus)
-        self.cap.set(cv2.CAP_PROP_EXPOSURE, -4)
+        #
+        # focus = 85  # min: 0, max: 255, increment:5
+        # # cap.set(3,1080)
+        # # cap.set(4,720)
+        # # cap.set(28, focus)
+        # self.cap.set(cv2.CAP_PROP_FOCUS, focus)
+        # self.cap.set(cv2.CAP_PROP_EXPOSURE, -4)
         self.get_frame()
 
     def get_frame(self):

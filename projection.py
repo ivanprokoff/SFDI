@@ -11,10 +11,31 @@ customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
 
-def read_patterns_paths(colors=['red', 'green', 'blue'],
-                        freqs=['00','01','02','04','12','16','20','32', '40','44'],
-                        factors=[0.45, 0.6, 0.85],
-                  patterns_folder='C:/Users/madpl/Documents/sfdi/projector/'):
+
+def read_patterns_paths(colors=['red',
+                                'green',
+                                #'blue'
+],
+                        freqs=['00',
+                               '01',
+                               '02',
+                               '04',
+                               '06',
+                             #  '08',
+                               '10',
+                               '12',
+                               '14',
+                               '18',
+                               #'22',
+                               '26',
+                              # '32',
+                               '34',
+                               #'36',
+                               '40',
+                               '44',
+                               '99'],
+                        factors=[0.45, 0.55, 0.75],
+                        patterns_folder='C:/Users/madpl/Documents/sfdi/projector'):
     '''
     reads patterns to a dictionary
     '''
@@ -28,8 +49,8 @@ def read_patterns_paths(colors=['red', 'green', 'blue'],
             name = file.split('\\')[-1].split('.')[0]
 
             if name.split('_')[0] in freqs:
-
                 patterns_dict[color, name] = (file, factor)
+            name.split('_')[0]
     return patterns_dict
 
 
@@ -42,13 +63,14 @@ class Projection(customtkinter.CTkToplevel):
         screen_height = self.winfo_screenheight()
         self.parent = parent
         # calculate position x and y coordinates
-        x = 1900
-        y = 50
-        self.geometry('%dx%d+%d+%d' % (1920, 1080, x, y))
+        x = 1950
+        y = 0
+        self.geometry('%dx%d+%d+%d' % (1900, 1200, x, y))
+
         self.pattern_window = customtkinter.CTkLabel(master=self, text='')
 
-        self.pattern_window.grid(row=0, column=0, pady=[50,0])
-        self.white_image = I.new('RGB', (1920, 1080), (155, 155, 155))
+        self.pattern_window.grid(row=0, column=0, pady=[0, 0])
+        self.white_image = I.new('RGB', (1920, 1080), (55,55, 55))
         self.tk_white_image = customtkinter.CTkImage(self.white_image, size=(1920, 1080))
 
         self.black_image = I.new('RGB', (1920, 1080), (0, 0, 0))
@@ -60,17 +82,17 @@ class Projection(customtkinter.CTkToplevel):
         with I.open(img_name[0]) as im:
             enhancer = ImageEnhance.Brightness(im)
 
-                # gives original image
+            # gives original image
             img = enhancer.enhance(img_name[1])
 
-        tk_img = customtkinter.CTkImage(img, size=(1920, 1080))
+        tk_img = customtkinter.CTkImage(img, size=(1100, 1100))
         self.pattern_window.configure(image=tk_img)
         self.parent.pattern_copy.configure(tk_img)
         self.pattern_window.update()
 
-        self.after(50)
+        self.after(70)
 
-    def set_background(self, color ='black'):
+    def set_background(self, color='black'):
         if color == 'black':
             self.pattern_window.configure(image=self.tk_black_image)
 
@@ -84,8 +106,8 @@ class Projection(customtkinter.CTkToplevel):
 
             self.after(50)
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     app = Projection()
     print(app.patterns.keys())
     app.mainloop()

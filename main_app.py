@@ -6,10 +6,8 @@ import os.path
 import sys
 import time
 import external_functions
-from PIL import ImageEnhance
-import projection_func as pf
+from PIL import ImageEnhance,ImageDraw
 from PIL import Image as I
-from open_close_button import Button
 from projection import Projection, read_patterns_paths
 from rgb_cam import Camera
 from thorcam import Thorcam
@@ -34,7 +32,7 @@ class App(customtkinter.CTk):
         self.iter_patterns = iter(self.patterns)
         self.exposure = 66.68 / 1000
         self.geometry('%dx%d+%d+%d' % (1520, 700, 0, 0))
-        self.camera = Camera()
+        self.camera = Camera(self)
         self.thor_camera = Thorcam(self)
 
         """
@@ -83,6 +81,7 @@ class App(customtkinter.CTk):
         self.tabview.grid(row=0, column=0,columnspan=2)
 
         self.projection_window = Projection(self)
+
         # self.projection_window.set_first_picture()
         self.infrared_name_entry = self.tabview.infrared_name_entry
 
@@ -143,14 +142,14 @@ class App(customtkinter.CTk):
                 self.pattern_copy.configure(image=img)
             self.after(15)
 
-    def renew_current_directory(self):
-        self.current_directory = external_functions.return_current_directory(self.patient_entry.get())
+    def renew_current_directory(self, mode='SFDI'):
+        self.current_directory = external_functions.return_current_directory(self.patient_entry.get(), mode)
 
     def save_thor_image(self, filename=''):
         if self.thor_camera.open:
-            self.renew_current_directory()
+            self.renew_current_directory('Infrared')
             img = self.thor_camera.get_frame()
-            filename = f'{self.current_directory}/Infrared/{self.tabview.infrared_name_entry.get()}_{self.tabview.exposure_entry.get()}_1.TIF'
+            filename = f'{self.current_directory}/{self.tabview.infrared_name_entry.get()}_{self.tabview.exposure_entry.get()}_1.TIF'
 
             for i in range(1, 10):
 
@@ -165,9 +164,9 @@ class App(customtkinter.CTk):
 
     def save_rgb_image(self, filename=''):
         if self.camera.cap:
-            self.renew_current_directory()
+            self.renew_current_directory(mode='Photo')
             img = self.camera.get_frame()
-            filename = f'{self.current_directory}/Photo/1.png'
+            filename = f'{self.current_directory}/1.png'
 
             for i in range(1, 10):
 
@@ -186,10 +185,12 @@ class App(customtkinter.CTk):
         while self.flag and self.thor_camera.open:
             raw_img = self.thor_camera.get_frame()
             if raw_img is not None:
-                raw_img = raw_img.astype('float')[::2,::2].T
-                thor_img = I.fromarray(raw_img * 255 // 1023)
+                raw_img = (raw_img.astype('float')[::2, ::2].T * 255 // 1023).astype('uint8')
 
-                tk_thor_img = customtkinter.CTkImage(thor_img, size = (np.shape(raw_img)[1],
+                thor_img = I.fromarray(raw_img).transpose(I.FLIP_LEFT_RIGHT)
+                draw = ImageDraw.Draw(thor_img)
+                draw.rectangle(((625//2, 1080//2), (380//2, 850//2)), fill=None, outline =255)
+                tk_thor_img = customtkinter.CTkImage(thor_img, size=(np.shape(raw_img)[1],
                                                                                 np.shape(raw_img)[0]
                                                                                 )
 
@@ -200,7 +201,7 @@ class App(customtkinter.CTk):
                 self.pattern_copy.update()
 
             else:
-                print('else')
+
                 black_image = I.new('RGB', (500, 500))
                 img = customtkinter.CTkImage(black_image, size=(500, 500))
                 self.pattern_copy.configure(image=img)
@@ -244,13 +245,14 @@ class App(customtkinter.CTk):
         self.thor_camera.cam.start_acquisition(auto_start=False, nframes=1, frames_per_trigger=1)
         pattern_list = list(self.patterns.items())
         pattern_list = pattern_list+[pattern_list[-1]]
-        self.after(40)
+        #self.after(30)
         self.flag = True
 
         for i, (key, img_name) in enumerate(pattern_list[:]):
             if not self.flag:
                 break
             with I.open(img_name[0]) as im:
+
                 enhancer = ImageEnhance.Brightness(im)
                 # gives original image
                 img = enhancer.enhance(img_name[1])
@@ -261,23 +263,24 @@ class App(customtkinter.CTk):
             self.projection_window.pattern_window.configure(image=img)
             self.projection_window.update()
 
-            self.after(40)
+            #self.after(10)
 
             raw_img = self.thor_camera.get_frame().T
-            translation_img = raw_img.astype('float')[::2, ::2]*255//1023
+            translation_img = (raw_img.astype('float')[::2, ::2] * 255 // 1023).astype('uint8')
+            translation_img = I.fromarray(translation_img).transpose(I.FLIP_LEFT_RIGHT)
             if raw_img is not None:
                 thor_img = I.fromarray(raw_img)
 
-                tk_thor_img = customtkinter.CTkImage(I.fromarray(translation_img), size=(np.shape(translation_img)[1],
+                tk_thor_img = customtkinter.CTkImage(translation_img, size=(np.shape(translation_img)[1],
                                                                                 np.shape(translation_img)[0]))
 
-                file_name = f'{self.current_directory}/SFDI/{pattern_list[i-1][0][0]}/{pattern_list[i-1][0][1]}.TIF'
+                file_name = f'{self.current_directory}/{pattern_list[i-1][0][0]}/{pattern_list[i-1][0][1]}.TIF'
 
                 while os.path.isfile(file_name):
                     self.patient_entry.insert('end', '_1')
-                    external_functions.create_patient_directory(self.patient_entry.get())
-                    self.renew_current_directory()
-                    file_name = f'{self.current_directory}/SFDI/{pattern_list[i - 1][0][0]}/{pattern_list[i - 1][0][1]}.TIF'
+                    external_functions.create_patient_directory(self.patient_entry.get(), modes=['SFDI'])
+                    self.renew_current_directory('SFDI')
+                    file_name = f'{self.current_directory}/{pattern_list[i - 1][0][0]}/{pattern_list[i - 1][0][1]}.TIF'
 
                 if i != 0:
                     thor_img.save(file_name)

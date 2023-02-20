@@ -6,38 +6,33 @@ import os
 def create_today_directory(main_path='C:/Users/madpl/clinic_data'):
     date = str(datetime.date(datetime.now()))
     date_path = f'{main_path}/{date}'
+    for mode in ['SFDI', 'Photo', 'Infrared']:
+        date_path = f'{main_path}/{mode}/{date}'
+        if not os.path.exists(date_path):
+            os.mkdir(date_path)
 
-    if not os.path.exists(date_path):
-        os.mkdir(date_path)
 
-
-def create_patient_directory(patient_id, main_path='C:/Users/madpl/clinic_data'):
+def create_patient_directory(patient_id, modes=['SFDI', 'Infrared', 'photo'], main_path='C:/Users/madpl/clinic_data'):
     date = str(datetime.date(datetime.now()))
-    folder_id = f'{main_path}/{date}/{patient_id}'
 
-    if patient_id and not os.path.exists(folder_id):
-        os.mkdir(folder_id)
+    for method in modes:
+        folder_id = f'{main_path}/{method}/{date}/{patient_id}'
 
-    if patient_id:
-        for method in ['SFDI', 'infrared', 'photo']:
+        if patient_id and not os.path.exists(folder_id):
+            os.mkdir(folder_id)
 
-            folder_name = f'{main_path}/{date}/{patient_id}/{method}'
 
-            if not os.path.exists(folder_name):
-                os.mkdir(folder_name)
+            for color in ['red', 'green', 'blue']:
 
-        for color in ['red', 'green', 'blue']:
-
-            folder_name = f'{main_path}/{date}/{patient_id}/SFDI/{color}'
-            if not os.path.exists(folder_name):
-                os.mkdir(folder_name)
+                folder_name = f'{main_path}/SFDI/{date}/{patient_id}/{color}'
+                if not os.path.exists(folder_name):
+                    os.mkdir(folder_name)
 
 
 
-def return_current_directory(patient_id, main_path='C:/Users/madpl/clinic_data'):
+def return_current_directory(patient_id, mode='SFDI', main_path='C:/Users/madpl/clinic_data'):
     date = str(datetime.date(datetime.now()))
-    folder_id = f'{main_path}/{date}/{patient_id}'
-    return f'{main_path}/{date}/{patient_id}'
+    return f'{main_path}/{mode}/{date}/{patient_id}'
 
 def predict_hb(parent):
     1
