@@ -22,8 +22,7 @@ class App(customtkinter.CTk):
         super().__init__()
 
         # configure window
-        self.animation = True
-        self.bind('<Escape>', lambda *args: [self.animation_stop(), sys.exit(1)])
+        self.bind('<Escape>', lambda *args: [sys.exit(1)])
         self.flag = True
         self.first_frame = True
         self.current_directory = None
@@ -102,9 +101,11 @@ class App(customtkinter.CTk):
 
             line = f'{current_time}      {args}'
             self.text_box.insert('0.0', line+'\n')
+            
         if command == 'Directory':
             line = f'{current_time}      {self.patient_entry.get()} directory created'
             self.text_box.insert('0.0', line + '\n')
+            
         if command == 'Predict':
             line = f'{current_time}      {self.patient_entry.get()} {args}'
             self.text_box.insert('0.0', line + '\n')
@@ -116,6 +117,7 @@ class App(customtkinter.CTk):
     def translate_rgb_cam(self):
 
         self.flag = True
+        
         while self.animation and self.flag and self.camera.cap:
 
             frame = self.camera.get_frame()
@@ -207,32 +209,6 @@ class App(customtkinter.CTk):
                 self.pattern_copy.configure(image=img)
             self.after(30)
 
-    def image_change(self, clock=1, color='blue'):
-        # self.sidebar_button_1.configure(text='pressed')
-        for i in range(5):
-            try:
-                img_name = self.patterns[next(self.iter_patterns)]
-                with I.open(img_name[0]) as im:
-                    enhancer = ImageEnhance.Brightness(im)
-
-                    # gives original image
-                    img = enhancer.enhance(0.5)
-
-                tk_img = customtkinter.CTkImage(img, size=(800, 600))
-                # self.pattern_copy['image'] = tk_img
-                self.pattern_copy.configure(image=tk_img)
-
-                tk_img = customtkinter.CTkImage(img, size=(1200, 900))
-                # self.projection_window.pattern_window['image'] = tk_img
-                self.projection_window.pattern_window.configure(image=tk_img)
-
-                self.projection_window.update()
-
-
-
-            except StopIteration:
-                self.create_iter_patterns()
-                self.first_frame = False
 
     def stop(self):
         self.thor_camera.stop_acquisition()
@@ -245,16 +221,18 @@ class App(customtkinter.CTk):
         self.thor_camera.cam.start_acquisition(auto_start=False, nframes=1, frames_per_trigger=1)
         pattern_list = list(self.patterns.items())
         pattern_list = pattern_list+[pattern_list[-1]]
-        #self.after(30)
+     
         self.flag = True
 
         for i, (key, img_name) in enumerate(pattern_list[:]):
+            
             if not self.flag:
                 break
+                
             with I.open(img_name[0]) as im:
 
                 enhancer = ImageEnhance.Brightness(im)
-                # gives original image
+               
                 img = enhancer.enhance(img_name[1])
 
             img = customtkinter.CTkImage(img, size=(np.shape(img)[1], np.shape(img)[0]))
@@ -263,19 +241,19 @@ class App(customtkinter.CTk):
             self.projection_window.pattern_window.configure(image=img)
             self.projection_window.update()
 
-            #self.after(10)
-
             raw_img = self.thor_camera.get_frame().T
             translation_img = (raw_img.astype('float')[::2, ::2] * 255 // 1023).astype('uint8')
             translation_img = I.fromarray(translation_img).transpose(I.FLIP_LEFT_RIGHT)
+            
             if raw_img is not None:
+                
                 thor_img = I.fromarray(raw_img)
 
                 tk_thor_img = customtkinter.CTkImage(translation_img, size=(np.shape(translation_img)[1],
                                                                                 np.shape(translation_img)[0]))
-
                 file_name = f'{self.current_directory}/{pattern_list[i-1][0][0]}/{pattern_list[i-1][0][1]}.TIF'
-
+                   
+                # if folder already exists
                 while os.path.isfile(file_name):
                     self.patient_entry.insert('end', '_1')
                     external_functions.create_patient_directory(self.patient_entry.get(), modes=['SFDI'])
@@ -284,18 +262,13 @@ class App(customtkinter.CTk):
 
                 if i != 0:
                     thor_img.save(file_name)
-
-
+                    
                 self.pattern_copy.configure(image=tk_thor_img)
-
                 self.pattern_copy.update()
+                
         self.insert_log('SFDI')
         self.thor_camera.cam.stop_acquisition()
 
-
-    def animation_stop(self):
-
-        self.animation = False
 
 
 if __name__ == "__main__":
