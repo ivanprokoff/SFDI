@@ -1,8 +1,5 @@
 from PIL import Image as I
-import pandas as pd
-import glob
-from PIL import Image, ImageEnhance
-import numpy as np
+from PIL import ImageEnhance
 from pathlib import Path
 
 
@@ -29,7 +26,7 @@ def read_patterns(colors=['red', 'green', 'blue'], factors=[0.4, 0.6, 1],
 
 
 def read_patterns_paths(colors=['red', 'green', 'blue'], factors=[0.4, 0.6, 1],
-                  patterns_folder='C:/Users/madpl/Documents/sfdi/projector/'):
+                        patterns_folder='C:/Users/madpl/Documents/sfdi/projector/'):
     '''
     reads patterns to a dictionary
     '''
@@ -41,10 +38,5 @@ def read_patterns_paths(colors=['red', 'green', 'blue'], factors=[0.4, 0.6, 1],
 
         for file in files:
             name = file.split('\\')[-1].split('.')[0]
-            # with I.open(file) as im:
-            #     enhancer = ImageEnhance.Brightness(im)
-
-                # gives original image
-                #im_output = enhancer.enhance(factor)
             patterns_dict[color][name] = (file, factor)
         return patterns_dict

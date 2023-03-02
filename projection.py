@@ -1,14 +1,10 @@
-import tkinter as tk
-import tkinter.messagebox
 import customtkinter
-import numpy as np
 from PIL import Image as I
 from PIL import ImageEnhance
 from pathlib import Path
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
-
 
 
 def read_patterns_paths(colors=[
@@ -35,10 +31,8 @@ def read_patterns_paths(colors=[
                                '99'],
                         factors=[0.45, 0.6, 0.8],
                         patterns_folder='C:/Users/madpl/Documents/sfdi/projector'):
-    '''
-        reads patterns to a dictionary
-        '''
-    #'01',
+    """Reads paths to patterns for translation and saves them into a dictionary"""
+
 
     patterns_dict = {}
     for color, factor in zip(colors[:], factors):
@@ -55,6 +49,7 @@ def read_patterns_paths(colors=[
 
 
 class Projection(customtkinter.CTkToplevel):
+    """Class for the frame that projects patterens on the second window"""
     def __init__(self, parent):
         super().__init__()
 
@@ -77,6 +72,7 @@ class Projection(customtkinter.CTkToplevel):
         self.tk_black_image = customtkinter.CTkImage(self.black_image, size=(1920, 1080))
 
     def set_first_picture(self):
+        """Sets the first pattern image"""
         img_name = list(self.parent.patterns.values())[0]
 
         with I.open(img_name[0]) as im:
@@ -94,6 +90,7 @@ class Projection(customtkinter.CTkToplevel):
         self.after(70)
 
     def set_background(self, color='black'):
+        """Sets a black or white background to the projector window"""
         if color == 'black':
             self.pattern_window.configure(image=self.tk_black_image)
 

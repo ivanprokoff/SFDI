@@ -6,7 +6,8 @@ import tkinter
 import time
 from datetime import datetime
 
-class Sidebar(customtkinter.CTkFrame):
+class Side_Frame(customtkinter.CTkFrame):
+    """Frame with patient id, buttons to open and close the cameras"""
     def __init__(self, parent, container):
         super().__init__(container)
 
@@ -75,6 +76,7 @@ class Sidebar(customtkinter.CTkFrame):
 
 
 class Log_Window(customtkinter.CTkFrame):
+    """Window for logging events during measurement"""
     def __init__(self, parent, container):
         super().__init__(container)
 
@@ -86,7 +88,7 @@ class Log_Window(customtkinter.CTkFrame):
         self.log_path = f'C:/Users/madpl/clinic_data/Logs/{date}/{date}_log.txt'
 
     def insert_log(self, command='Infrared', *args):
-
+        """Inserts log and saves to txt depending on the event"""
         t = time.localtime()
         current_time = time.strftime("%H:%M:%S", t)
 
@@ -109,7 +111,9 @@ class Log_Window(customtkinter.CTkFrame):
         with open(self.log_path, 'a') as f:
             f.write(line)
             f.write('\n')
+
 class Translation(customtkinter.CTkFrame):
+    """Class for the frame that translates the view from the cameras"""
     def __init__(self, parent, container):
         super().__init__(container)
 
@@ -121,6 +125,7 @@ class Translation(customtkinter.CTkFrame):
 
 
 class TabWindow(customtkinter.CTkTabview):
+    """Class for the window with all methods in a tab frame"""
     def __init__(self, parent, container):
         super().__init__(container)
         self.parent = parent
@@ -211,6 +216,7 @@ class TabWindow(customtkinter.CTkTabview):
         self.stop_button.grid(row=2, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
 
     def fill_entry(self):
+        """Fills the exposition entry """
         patient = self.parent.patient_entry.get()
         exposure = self.exposure_entry.get()
         wv = self.radio_var.get()

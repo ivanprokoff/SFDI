@@ -2,7 +2,6 @@ from tkinter import *
 from PIL import ImageTk, Image
 import cv2
 
-
 root = Tk()
 # Create a frame
 app = Frame(root, bg="white")
@@ -14,6 +13,7 @@ lmain.grid()
 # Capture from camera
 cap = cv2.VideoCapture(0)
 
+
 # function for video streaming
 def video_stream():
     _, frame = cap.read()
@@ -23,6 +23,7 @@ def video_stream():
     lmain.imgtk = imgtk
     lmain.configure(image=imgtk)
     lmain.after(1, video_stream)
+
 
 video_stream()
 root.mainloop()

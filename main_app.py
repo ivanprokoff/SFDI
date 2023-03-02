@@ -1,19 +1,17 @@
-import tkinter as tk
 import cv2
 import customtkinter
 import numpy as np
 import os.path
 import sys
-import time
 import external_functions
 from PIL import ImageEnhance, ImageDraw
 from PIL import Image as I
 from projection import Projection, read_patterns_paths
 from rgb_cam import Camera
 from thorcam import Thorcam
-from frames import Sidebar, Translation, TabWindow, Log_Window
+from frames import Side_Frame, Translation, TabWindow, Log_Window
 
-customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
+customtkinter.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
 
@@ -23,7 +21,7 @@ class App(customtkinter.CTk):
 
         # configure window
         self.animation = True
-        self.bind('<Escape>', lambda *args: [ sys.exit(1)])
+        self.bind('<Escape>', lambda *args: [sys.exit(1)])
         self.flag = True
         self.first_frame = True
         self.current_directory = None
@@ -39,10 +37,11 @@ class App(customtkinter.CTk):
         """
         SIDEBAR FRAME
         """
-        container = customtkinter.CTkFrame(self, width=80, height=1, corner_radius=0, border_width=1, border_color='white')
-        container.grid(row=0, column=0, rowspan=1, columnspan=1, pady=[50,10], padx=20,sticky = 'NW')
+        container = customtkinter.CTkFrame(self, width=80, height=1, corner_radius=0, border_width=1,
+                                           border_color='white')
+        container.grid(row=0, column=0, rowspan=1, columnspan=1, pady=[50, 10], padx=20, sticky='NW')
 
-        self.sidebar_frame = Sidebar(self, container)
+        self.sidebar_frame = Side_Frame(self, container)
         self.patient_entry = self.sidebar_frame.patient_entry
         self.sidebar_frame.grid(row=0, column=0)
 
@@ -57,7 +56,7 @@ class App(customtkinter.CTk):
         self.log_frame.grid(row=0, column=0)
 
         """
-        Central frame
+        Frame window for camera translation
         """
         container_center = customtkinter.CTkFrame(self, width=90, height=100, border_color='white', border_width=1)
         container_center.grid(row=0, column=4, rowspan=5, columnspan=1, pady=50, padx=20, sticky="NW")
@@ -67,7 +66,7 @@ class App(customtkinter.CTk):
         self.pattern_copy = self.translation_frame.pattern_copy
 
         """
-        TAB frame
+        TAB frame with all methods
         """
         self.tab_frame = customtkinter.CTkFrame(self, width=30, height=1, corner_radius=0, border_width=1,
                                                 border_color='white')
@@ -84,11 +83,8 @@ class App(customtkinter.CTk):
         # self.projection_window.set_first_picture()
         self.infrared_name_entry = self.tabview.infrared_name_entry
 
-
-
-
     def translate_rgb_cam(self):
-
+        """Translates view from rgb cam"""
         self.flag = True
         while self.animation and self.flag and self.camera.cap:
 
@@ -104,7 +100,7 @@ class App(customtkinter.CTk):
             pil_img = I.fromarray(frame)
 
             if frame is not None:
-                img = customtkinter.CTkImage(pil_img, size = (np.shape(pil_img)[1],np.shape(pil_img)[0]))
+                img = customtkinter.CTkImage(pil_img, size=(np.shape(pil_img)[1], np.shape(pil_img)[0]))
 
                 self.pattern_copy['image'] = img
                 self.pattern_copy.configure(image=img)
@@ -112,18 +108,20 @@ class App(customtkinter.CTk):
 
             else:
                 black_image = I.new('RGB', (500, 500))
-                img = customtkinter.CTkImage(black_image, size=(500,500))
+                img = customtkinter.CTkImage(black_image, size=(500, 500))
                 self.pattern_copy.configure(image=img)
             self.after(15)
 
     def renew_current_directory(self, mode='SFDI'):
+        """Updates current directory variable"""
         self.current_directory = external_functions.return_current_directory(self.patient_entry.get(), mode)
 
     def save_thor_image(self, filename=''):
+        """Saves an image from thorcam during infrared measurements """
         if self.thor_camera.open:
             self.renew_current_directory('Infrared')
             img = self.thor_camera.get_frame()
-            filename = f'{self.current_directory}/{self.tabview.infrared_name_entry.get()}_{self.tabview.exposure_entry.get()}_1.TIF'
+            filename = f'{self.current_directory}/{self.tabview.infrared_name_entry.get()}_{self.tabview.exposure_entry.get()}_1.TIF '
 
             for i in range(1, 10):
 
@@ -137,6 +135,7 @@ class App(customtkinter.CTk):
                     break
 
     def save_rgb_image(self, filename=''):
+        """Saves rgb cam image during Photo mode"""
         if self.camera.cap:
             self.renew_current_directory(mode='Photo')
             img = self.camera.get_frame()
@@ -154,7 +153,7 @@ class App(customtkinter.CTk):
                     break
 
     def translate_thor_cam(self):
-
+        """Translates thorcam view"""
         self.flag = True
         while self.flag and self.thor_camera.open:
             raw_img = self.thor_camera.get_frame()
@@ -163,10 +162,10 @@ class App(customtkinter.CTk):
 
                 thor_img = I.fromarray(raw_img).transpose(I.FLIP_LEFT_RIGHT)
                 draw = ImageDraw.Draw(thor_img)
-                draw.rectangle(((625//2, 1080//2), (380//2, 850//2)), fill=None, outline =255)
+                draw.rectangle(((625 // 2, 1080 // 2), (380 // 2, 850 // 2)), fill=None, outline=255)
                 tk_thor_img = customtkinter.CTkImage(thor_img, size=(np.shape(raw_img)[1],
-                                                                                np.shape(raw_img)[0]
-                                                                                )
+                                                                     np.shape(raw_img)[0]
+                                                                     )
 
                                                      )
 
@@ -181,21 +180,21 @@ class App(customtkinter.CTk):
                 self.pattern_copy.configure(image=img)
             self.after(30)
 
-
     def stop(self):
+        """Stops cameras and pattern translation"""
         self.thor_camera.stop_acquisition()
         self.camera.release_camera()
         self.flag = False
         external_functions.change_button_state(self, block=False)
 
-
     def begin_sfdi(self):
-
+        """A loop for pattern translation to projector, taking thorcam photos and
+        saving them in a relevant directory. Rather large function for now."""
         if self.thor_camera.cam:
             self.thor_camera.cam.set_exposure(self.exposure)
             self.thor_camera.cam.start_acquisition(auto_start=False, nframes=1, frames_per_trigger=1)
             pattern_list = list(self.patterns.items())
-            pattern_list = pattern_list+[pattern_list[-1]]
+            pattern_list = pattern_list + [pattern_list[-1]]
             self.flag = True
             external_functions.change_button_state(self, block=True)
 
@@ -206,37 +205,31 @@ class App(customtkinter.CTk):
         for i, (key, img_name) in enumerate(pattern_list[:]):
             if not self.flag:
                 self.projection_window.set_background()
-                img = None
                 break
-            with I.open(img_name[0]) as im:
+            with I.open(img_name[0]).rotate(90) as im:
 
                 enhancer = ImageEnhance.Brightness(im)
-                # gives original image
                 img = enhancer.enhance(img_name[1])
-
             img = customtkinter.CTkImage(img, size=(np.shape(img)[1], np.shape(img)[0]))
 
             self.projection_window.pattern_window['image'] = img
             self.projection_window.pattern_window.configure(image=img)
             self.projection_window.update()
 
-
-
             raw_img = self.thor_camera.get_frame()
+
             if raw_img is not None:
                 translation_img = (raw_img.T.astype('float')[::2, ::2] * 255 // 1023).astype('uint8')
                 translation_img = I.fromarray(translation_img).transpose(I.FLIP_LEFT_RIGHT)
-
                 thor_img = I.fromarray(raw_img)
-
                 tk_thor_img = customtkinter.CTkImage(translation_img, size=(np.shape(translation_img)[1],
-                                                                                np.shape(translation_img)[0]))
+                                                                            np.shape(translation_img)[0]))
 
-                file_name = f'{self.current_directory}/{pattern_list[i-1][0][0]}/{pattern_list[i-1][0][1]}.TIF'
+                file_name = f'{self.current_directory}/{pattern_list[i - 1][0][0]}/{pattern_list[i - 1][0][1]}.TIF'
+
                 if os.path.isfile(file_name):
                     self.patient_entry.configure(state='normal')
                     while os.path.isfile(file_name):
-
                         self.patient_entry.insert('end', '_1')
                         external_functions.create_patient_directory(self.patient_entry.get(), modes=['SFDI'])
                         self.renew_current_directory('SFDI')
@@ -250,19 +243,9 @@ class App(customtkinter.CTk):
                 self.pattern_copy.update()
 
         self.log_frame.insert_log('SFDI')
-        print("Now stopping ThorCam acquisition")
-        start_time = time.time()
         self.thor_camera.cam.stop_acquisition()
         self.after(2000)
         external_functions.change_button_state(self, block=False)
-        #print(f"Elapsed time after closing: {time.time() - start_time:.2f} seconds")
-        #print("Camera is acquiring after stopping:", self.thor_camera.cam.acquisition_in_progress())
-       # print("Now acquisition is stopped")
-
-
-    # def animation_stop(self):
-    #
-    #     self.animation = False
 
 
 if __name__ == "__main__":

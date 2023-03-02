@@ -1,9 +1,10 @@
 import cv2
-from PIL import Image as I
 
 
 class Camera():
-    def __init__(self,parent):
+    """Class for the rgb camera: closing, opening, frame acquisition"""
+
+    def __init__(self, parent):
         self.cap = None
         self.width, self.height = 1920, 1080
         self.open = False
@@ -18,9 +19,9 @@ class Camera():
 
         self.cap.set(cv2.CAP_PROP_SETTINGS, 1)
 
-        #parent.translate_rgb_cam()
-
     def open_camera(self):
+        """Initiates the camera"""
+
         self.open = True
         self.release_camera()
         self.cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
@@ -28,32 +29,17 @@ class Camera():
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         self.cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
-        #
-        # focus = 85  # min: 0, max: 255, increment:5
-        # # cap.set(3,1080)
-        # # cap.set(4,720)
-        # # cap.set(28, focus)
-        # self.cap.set(cv2.CAP_PROP_FOCUS, focus)
-        # self.cap.set(cv2.CAP_PROP_EXPOSURE, -4)
         self.get_frame()
 
     def get_frame(self):
-
+        """Takes a photo and returns it"""
         s, frame = self.cap.read()
-        if s:  # frame captures without errors...
-
-
-            return frame[:,:-800]
-
-
+        if s:
+            return frame[:, :-800]
 
     def release_camera(self):
-        #self.cap = False
-       # print('cloooooose')
-       # try:
+        """Releases camera"""
         if self.cap:
             self.cap.release()
-
-        # except AttributeError:
 
 

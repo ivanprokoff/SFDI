@@ -4,6 +4,7 @@ import os
 
 
 def create_today_directory(main_path='C:/Users/madpl/clinic_data'):
+    """Creates directories for the current day"""
     date = str(datetime.date(datetime.now()))
 
     for mode in ['SFDI', 'Photo', 'Infrared', 'Logs']:
@@ -19,6 +20,7 @@ def create_today_directory(main_path='C:/Users/madpl/clinic_data'):
 
 
 def create_patient_directory(patient_id, modes=['SFDI', 'Infrared', 'photo'], main_path='C:/Users/madpl/clinic_data'):
+    """Creates directories for the current patient/phantom"""
     date = str(datetime.date(datetime.now()))
 
     for method in modes:
@@ -35,12 +37,13 @@ def create_patient_directory(patient_id, modes=['SFDI', 'Infrared', 'photo'], ma
                     os.mkdir(folder_name)
 
 
-
 def return_current_directory(patient_id, mode='SFDI', main_path='C:/Users/madpl/clinic_data'):
+    """Returns the current directory depending on the entry fields"""
     date = str(datetime.date(datetime.now()))
     return f'{main_path}/{mode}/{date}/{patient_id}'
 
 def predict_hb(parent):
+    """Class docstrings go here."""
     1
     # parent.renew_current_directory()
     # folder_photo = f'{parent.current_directory}/Photo'
@@ -52,6 +55,7 @@ def predict_hb(parent):
     # parent.insert_log('Predict', args)
 
 def change_button_state(parent, block=True):
+    """Disables and enables buttons for a safe sfdi measurement"""
 
     if block:
         parent.patient_entry.configure(state='disabled')
