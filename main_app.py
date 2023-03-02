@@ -190,8 +190,10 @@ class App(customtkinter.CTk):
     def begin_sfdi(self):
         """A loop for pattern translation to projector, taking thorcam photos and
         saving them in a relevant directory. Rather large function for now."""
+        blue_flag = True
         if self.thor_camera.cam:
             self.thor_camera.cam.set_exposure(self.exposure)
+
             self.thor_camera.cam.start_acquisition(auto_start=False, nframes=1, frames_per_trigger=1)
             pattern_list = list(self.patterns.items())
             pattern_list = pattern_list + [pattern_list[-1]]
@@ -206,7 +208,7 @@ class App(customtkinter.CTk):
             if not self.flag:
                 self.projection_window.set_background()
                 break
-            with I.open(img_name[0]).rotate(90) as im:
+            with I.open(img_name[0]) as im:
 
                 enhancer = ImageEnhance.Brightness(im)
                 img = enhancer.enhance(img_name[1])
@@ -215,6 +217,9 @@ class App(customtkinter.CTk):
             self.projection_window.pattern_window['image'] = img
             self.projection_window.pattern_window.configure(image=img)
             self.projection_window.update()
+
+
+
 
             raw_img = self.thor_camera.get_frame()
 
@@ -242,9 +247,15 @@ class App(customtkinter.CTk):
                 self.pattern_copy.configure(image=tk_thor_img)
                 self.pattern_copy.update()
 
+            if blue_flag and 'blue' in img_name[0]:
+                self.thor_camera.change_exposition(100)
+                blue_flag = False
+
+                self.after(100)
+
         self.log_frame.insert_log('SFDI')
         self.thor_camera.cam.stop_acquisition()
-        self.after(2000)
+        self.after(3000)
         external_functions.change_button_state(self, block=False)
 
 

@@ -1,7 +1,7 @@
 import cv2
 
 
-class Camera():
+class Camera:
     """Class for the rgb camera: closing, opening, frame acquisition"""
 
     def __init__(self, parent):
@@ -17,7 +17,7 @@ class Camera():
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         self.cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
 
-        self.cap.set(cv2.CAP_PROP_SETTINGS, 1)
+        #self.cap.set(cv2.CAP_PROP_SETTINGS, 1)
 
     def open_camera(self):
         """Initiates the camera"""

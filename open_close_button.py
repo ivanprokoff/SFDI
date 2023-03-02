@@ -3,6 +3,7 @@ import customtkinter
 
 class Button(customtkinter.CTkButton):
     """Class for a button that changes function and allows for closing and opening cameras"""
+
     def __init__(self, *args,
                  **kwargs):
         super().__init__(*args, **kwargs)
@@ -19,7 +20,7 @@ class Button(customtkinter.CTkButton):
         self.close_text = close_text
         self.open_commands = open_commands
         self.close_commands = close_commands
-        self.configure(self,  command=open_commands, text=open_text)
+        self.configure(self, command=open_commands, text=open_text)
 
     def change_function(self):
         """Changes commands from open to close and vice versa"""

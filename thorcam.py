@@ -1,6 +1,5 @@
 import pylablib as pll
 from pylablib.devices import Thorlabs
-import customtkinter
 pll.par["devices/dlls/thorlabs_tlcam"] = "path/to/dlls"
 
 
@@ -21,8 +20,6 @@ class Thorcam():
 
         self.cam.set_exposure(self.parent.exposure)
         self.cam.set_trigger_mode('int')
-
-
 
     def get_frame(self):
         """Reads the last frame"""

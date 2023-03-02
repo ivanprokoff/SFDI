@@ -6,33 +6,34 @@ from pathlib import Path
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
+freqs = ['01', '02', '04', '06', '10', '12', '14', '18', '26', '34', '40', '44']
+
 
 def read_patterns_paths(colors=[
-                                'red',
-                               # 'green',
-                               # 'blue'
+    'red',
+    'green',
+    'blue'
 ],
-                        freqs=[#'00',
-                               '02',
-                              # '04',
-                               '06',
-                              ## '08',
-                               '10',
-                               '12',
-                             ##  '14',
-                               '18',
-                              # '22',
-                               '26',
-                               '32',
-                               #'34',
-                               '36',
-                               '40',
-                               '44',
-                               '99'],
-                        factors=[0.45, 0.6, 0.8],
-                        patterns_folder='C:/Users/madpl/Documents/sfdi/projector'):
+        freqs=[#'01',
+               #'02',
+               #'04',
+               #'06',
+               ## '08',
+              # '10',
+               #  '12',
+               #  '14',
+                '18',
+               # # '22',
+               #  '26',
+               # # '32',
+               #  '34',
+                 '36',
+                 '40',
+               #  '44',
+               '99'],
+        factors=[0.50, 0.55, 0.65],
+        patterns_folder='C:/Users/madpl/Documents/sfdi/projector'):
     """Reads paths to patterns for translation and saves them into a dictionary"""
-
 
     patterns_dict = {}
     for color, factor in zip(colors[:], factors):
@@ -50,6 +51,7 @@ def read_patterns_paths(colors=[
 
 class Projection(customtkinter.CTkToplevel):
     """Class for the frame that projects patterens on the second window"""
+
     def __init__(self, parent):
         super().__init__()
 
@@ -65,7 +67,7 @@ class Projection(customtkinter.CTkToplevel):
         self.pattern_window = customtkinter.CTkLabel(master=self, text='')
 
         self.pattern_window.grid(row=0, column=0, pady=[0, 0])
-        self.white_image = I.new('RGB', (1920, 1080), (55,55, 55))
+        self.white_image = I.new('RGB', (1920, 1080), (55, 55, 55))
         self.tk_white_image = customtkinter.CTkImage(self.white_image, size=(1920, 1080))
 
         self.black_image = I.new('RGB', (1920, 1080), (0, 0, 0))
@@ -76,7 +78,6 @@ class Projection(customtkinter.CTkToplevel):
         img_name = list(self.parent.patterns.values())[0]
 
         with I.open(img_name[0]) as im:
-
             enhancer = ImageEnhance.Brightness(im)
 
             # gives original image

@@ -17,7 +17,7 @@ class Side_Frame(customtkinter.CTkFrame):
         self.folder_button = customtkinter.CTkButton(self,
                                                      command=lambda *args: [create_patient_directory(
                                                          self.patient_entry.get()),
-                                                         parent.insert_log('Directory'),
+                                                         parent.log_frame.insert_log('Directory'),
                                                          parent.tabview.fill_entry()],
                                                      text='Create directory')
 

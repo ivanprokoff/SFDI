@@ -1,6 +1,8 @@
 from datetime import datetime
 import os
-#import photo_pipeline_2
+
+
+# import photo_pipeline_2
 
 
 def create_today_directory(main_path='C:/Users/madpl/clinic_data'):
@@ -29,7 +31,6 @@ def create_patient_directory(patient_id, modes=['SFDI', 'Infrared', 'photo'], ma
         if patient_id and not os.path.exists(folder_id):
             os.mkdir(folder_id)
 
-
             for color in ['red', 'green', 'blue']:
 
                 folder_name = f'{main_path}/SFDI/{date}/{patient_id}/{color}'
@@ -42,6 +43,7 @@ def return_current_directory(patient_id, mode='SFDI', main_path='C:/Users/madpl/
     date = str(datetime.date(datetime.now()))
     return f'{main_path}/{mode}/{date}/{patient_id}'
 
+
 def predict_hb(parent):
     """Class docstrings go here."""
     1
@@ -53,6 +55,7 @@ def predict_hb(parent):
     # print(pred_dict)
     # args = 'Hb_level='+str(int(pred_dict[-1]['HB_GperL']))+'g/L'
     # parent.insert_log('Predict', args)
+
 
 def change_button_state(parent, block=True):
     """Disables and enables buttons for a safe sfdi measurement"""
@@ -78,4 +81,3 @@ def change_button_state(parent, block=True):
         parent.tabview.exposure_entry.configure(state='normal')
 
     parent.after(50, parent.update)
-
