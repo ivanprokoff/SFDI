@@ -5,7 +5,6 @@ import numpy as np
 from PIL import Image as I
 from PIL import ImageEnhance
 from pathlib import Path
-import projection_func as pf
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
