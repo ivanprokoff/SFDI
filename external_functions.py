@@ -5,11 +5,17 @@ import os
 
 def create_today_directory(main_path='C:/Users/madpl/clinic_data'):
     date = str(datetime.date(datetime.now()))
-    date_path = f'{main_path}/{date}'
-    for mode in ['SFDI', 'Photo', 'Infrared']:
+
+    for mode in ['SFDI', 'Photo', 'Infrared', 'Logs']:
         date_path = f'{main_path}/{mode}/{date}'
         if not os.path.exists(date_path):
             os.mkdir(date_path)
+
+    log_path = f'{main_path}/Logs/{date}/{date}_log.txt'
+
+    if not os.path.isfile(log_path):
+        with open(log_path, 'w') as f:
+            f.write('')
 
 
 def create_patient_directory(patient_id, modes=['SFDI', 'Infrared', 'photo'], main_path='C:/Users/madpl/clinic_data'):
@@ -44,3 +50,28 @@ def predict_hb(parent):
     # print(pred_dict)
     # args = 'Hb_level='+str(int(pred_dict[-1]['HB_GperL']))+'g/L'
     # parent.insert_log('Predict', args)
+
+def change_button_state(parent, block=True):
+
+    if block:
+        parent.patient_entry.configure(state='disabled')
+        parent.sidebar_frame.folder_button.configure(state='disabled')
+        parent.sidebar_frame.white_button.configure(state='disabled')
+        parent.sidebar_frame.black_button.configure(state='disabled')
+        parent.sidebar_frame.rgb_button.configure(state='disabled')
+        parent.sidebar_frame.thor_button.configure(state='disabled')
+        parent.sidebar_frame.open_thor_button.configure(state='disabled')
+        parent.tabview.exposure_entry.configure(state='disabled')
+
+    else:
+        parent.patient_entry.configure(state='normal')
+        parent.sidebar_frame.folder_button.configure(state='normal')
+        parent.sidebar_frame.white_button.configure(state='normal')
+        parent.sidebar_frame.black_button.configure(state='normal')
+        parent.sidebar_frame.rgb_button.configure(state='normal')
+        parent.sidebar_frame.thor_button.configure(state='normal')
+        parent.sidebar_frame.open_thor_button.configure(state='normal')
+        parent.tabview.exposure_entry.configure(state='normal')
+
+    parent.after(50, parent.update)
+

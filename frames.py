@@ -3,8 +3,8 @@ from open_close_button import Button
 from PIL import Image as I
 from external_functions import create_patient_directory, predict_hb
 import tkinter
-import sys
-
+import time
+from datetime import datetime
 
 class Sidebar(customtkinter.CTkFrame):
     def __init__(self, parent, container):
@@ -21,14 +21,6 @@ class Sidebar(customtkinter.CTkFrame):
                                                      text='Create directory')
 
         self.folder_button.grid(row=0, column=1, padx=5, pady=10)
-
-        # self.sidebar_button_1 = customtkinter.CTkButton(self,
-        #                                                 command=lambda *args: [
-        #                                                     parent.camera.release_camera(),
-        #                                                     parent.image_change()],
-        #                                                 text='Projection')
-        #
-        # self.sidebar_button_1.grid(row=2, column=0, padx=20, pady=[40,20])
         self.black_button = Button(self, text_color='white',fg_color='black')
         self.black_button.set_commands(open_text='Black', close_text='close RGB camera',
                                        open_commands=lambda *args: [
@@ -88,9 +80,35 @@ class Log_Window(customtkinter.CTkFrame):
 
         self.textbox = customtkinter.CTkTextbox(master=self, width=400, height=200, corner_radius=0, spacing1=10)
         self.textbox.grid(row=0, column=0, sticky="nsew")
-        # self.configure(border_width=2, border_color='white')
+        self.parent = parent
+        date = str(datetime.date(datetime.now()))
 
+        self.log_path = f'C:/Users/madpl/clinic_data/Logs/{date}/{date}_log.txt'
 
+    def insert_log(self, command='Infrared', *args):
+
+        t = time.localtime()
+        current_time = time.strftime("%H:%M:%S", t)
+
+        if command == 'SFDI':
+            line = f'{current_time}     {self.parent.patient_entry.get()} SFDI measured'
+        elif command == 'Infrared':
+            line = f'{current_time}      {args}'
+        elif command == 'RGB':
+
+            line = f'{current_time}      {args}'
+        elif command == 'Directory':
+            line = f'{current_time}      {self.parent.patient_entry.get()} directory created'
+        elif command == 'Predict':
+            line = f'{current_time}      {self.parent.patient_entry.get()} {args}'
+        elif command == 'Exception':
+            line = f'{current_time}      ThorCam is closed'
+
+        self.parent.text_box.insert('0.0', line + '\n')
+
+        with open(self.log_path, 'a') as f:
+            f.write(line)
+            f.write('\n')
 class Translation(customtkinter.CTkFrame):
     def __init__(self, parent, container):
         super().__init__(container)
@@ -142,12 +160,12 @@ class TabWindow(customtkinter.CTkTabview):
         self.radio_button_730 = customtkinter.CTkRadioButton(self.tab('Infrared'), text="730", variable=self.radio_var,
                                                              value=730,
                                                              command=lambda *args: self.fill_entry())
-        self.radio_button_730.grid(row=2, column=1)
+        self.radio_button_730.grid(row=2, column=0)
 
         self.radio_button_850 = customtkinter.CTkRadioButton(self.tab('Infrared'), text='850', variable=self.radio_var,
                                                              value=850,
                                                              command=lambda *args: self.fill_entry())
-        self.radio_button_850.grid(row=2, column=0)
+        self.radio_button_850.grid(row=2, column=1)
 
         self.fill_entry()
 
@@ -180,6 +198,7 @@ class TabWindow(customtkinter.CTkTabview):
 
                                                        parent.begin_sfdi()],
                                                    border_width=1)
+
         self.stop_button = customtkinter.CTkButton(master=self.tab("SFDI"), fg_color="transparent",
                                                    text_color=("gray10", "#DCE4EE"), text='Stop',
                                                    command=lambda *arg: [

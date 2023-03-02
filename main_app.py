@@ -6,7 +6,7 @@ import os.path
 import sys
 import time
 import external_functions
-from PIL import ImageEnhance,ImageDraw
+from PIL import ImageEnhance, ImageDraw
 from PIL import Image as I
 from projection import Projection, read_patterns_paths
 from rgb_cam import Camera
@@ -23,7 +23,7 @@ class App(customtkinter.CTk):
 
         # configure window
         self.animation = True
-        self.bind('<Escape>', lambda *args: [self.animation_stop(), sys.exit(1)])
+        self.bind('<Escape>', lambda *args: [ sys.exit(1)])
         self.flag = True
         self.first_frame = True
         self.current_directory = None
@@ -32,6 +32,7 @@ class App(customtkinter.CTk):
         self.iter_patterns = iter(self.patterns)
         self.exposure = 66.68 / 1000
         self.geometry('%dx%d+%d+%d' % (1520, 700, 0, 0))
+
         self.camera = Camera(self)
         self.thor_camera = Thorcam(self)
 
@@ -39,8 +40,6 @@ class App(customtkinter.CTk):
         SIDEBAR FRAME
         """
         container = customtkinter.CTkFrame(self, width=80, height=1, corner_radius=0, border_width=1, border_color='white')
-
-
         container.grid(row=0, column=0, rowspan=1, columnspan=1, pady=[50,10], padx=20,sticky = 'NW')
 
         self.sidebar_frame = Sidebar(self, container)
@@ -78,37 +77,12 @@ class App(customtkinter.CTk):
         container.grid(row=0, column=0, padx=20, pady=(0, 0), sticky="NseW")
 
         self.tabview = TabWindow(self, container)
-        self.tabview.grid(row=0, column=0,columnspan=2)
+        self.tabview.grid(row=0, column=0, columnspan=2)
 
         self.projection_window = Projection(self)
 
         # self.projection_window.set_first_picture()
         self.infrared_name_entry = self.tabview.infrared_name_entry
-
-    def insert_log(self, command='Infrared', *args):
-
-        t = time.localtime()
-        current_time = time.strftime("%H:%M:%S", t)
-        if command == 'SFDI':
-            line = f'{current_time}     {self.patient_entry.get()} SFDI measured'
-            self.text_box.insert('0.0', line+'\n')
-
-        if command == 'Infrared':
-
-           # line = f'{current_time}      {self.infrared_name_entry.get()} Photo_taken'
-            line = f'{current_time}      {args}'
-            self.text_box.insert('0.0', line+'\n')
-        if command == 'RGB':
-
-            line = f'{current_time}      {args}'
-            self.text_box.insert('0.0', line+'\n')
-        if command == 'Directory':
-            line = f'{current_time}      {self.patient_entry.get()} directory created'
-            self.text_box.insert('0.0', line + '\n')
-        if command == 'Predict':
-            line = f'{current_time}      {self.patient_entry.get()} {args}'
-            self.text_box.insert('0.0', line + '\n')
-
 
 
 
@@ -158,7 +132,7 @@ class App(customtkinter.CTk):
                     filename += f'{i}.TIF'
                 else:
                     I.fromarray(img).save(filename)
-                    self.insert_log('Infrared', filename[38:])
+                    self.log_frame.insert_log('Infrared', filename[38:])
 
                     break
 
@@ -175,7 +149,7 @@ class App(customtkinter.CTk):
                     filename += f'{i}.png'
                 else:
                     cv2.imwrite(filename, img)
-                    self.insert_log('RGB', filename[38:])
+                    self.log_frame.insert_log('RGB', filename[38:])
 
                     break
 
@@ -207,49 +181,32 @@ class App(customtkinter.CTk):
                 self.pattern_copy.configure(image=img)
             self.after(30)
 
-    def image_change(self, clock=1, color='blue'):
-        # self.sidebar_button_1.configure(text='pressed')
-        for i in range(5):
-            try:
-                img_name = self.patterns[next(self.iter_patterns)]
-                with I.open(img_name[0]) as im:
-                    enhancer = ImageEnhance.Brightness(im)
-
-                    # gives original image
-                    img = enhancer.enhance(0.5)
-
-                tk_img = customtkinter.CTkImage(img, size=(800, 600))
-                # self.pattern_copy['image'] = tk_img
-                self.pattern_copy.configure(image=tk_img)
-
-                tk_img = customtkinter.CTkImage(img, size=(1200, 900))
-                # self.projection_window.pattern_window['image'] = tk_img
-                self.projection_window.pattern_window.configure(image=tk_img)
-
-                self.projection_window.update()
-
-
-
-            except StopIteration:
-                self.create_iter_patterns()
-                self.first_frame = False
 
     def stop(self):
         self.thor_camera.stop_acquisition()
         self.camera.release_camera()
         self.flag = False
+        external_functions.change_button_state(self, block=False)
+
 
     def begin_sfdi(self):
 
-        self.thor_camera.cam.set_exposure(self.exposure)
-        self.thor_camera.cam.start_acquisition(auto_start=False, nframes=1, frames_per_trigger=1)
-        pattern_list = list(self.patterns.items())
-        pattern_list = pattern_list+[pattern_list[-1]]
-        #self.after(30)
-        self.flag = True
+        if self.thor_camera.cam:
+            self.thor_camera.cam.set_exposure(self.exposure)
+            self.thor_camera.cam.start_acquisition(auto_start=False, nframes=1, frames_per_trigger=1)
+            pattern_list = list(self.patterns.items())
+            pattern_list = pattern_list+[pattern_list[-1]]
+            self.flag = True
+            external_functions.change_button_state(self, block=True)
+
+        else:
+            self.log_frame.insert_log('Exception')
+            return
 
         for i, (key, img_name) in enumerate(pattern_list[:]):
             if not self.flag:
+                self.projection_window.set_background()
+                img = None
                 break
             with I.open(img_name[0]) as im:
 
@@ -263,39 +220,49 @@ class App(customtkinter.CTk):
             self.projection_window.pattern_window.configure(image=img)
             self.projection_window.update()
 
-            #self.after(10)
 
-            raw_img = self.thor_camera.get_frame().T
-            translation_img = (raw_img.astype('float')[::2, ::2] * 255 // 1023).astype('uint8')
-            translation_img = I.fromarray(translation_img).transpose(I.FLIP_LEFT_RIGHT)
+
+            raw_img = self.thor_camera.get_frame()
             if raw_img is not None:
+                translation_img = (raw_img.T.astype('float')[::2, ::2] * 255 // 1023).astype('uint8')
+                translation_img = I.fromarray(translation_img).transpose(I.FLIP_LEFT_RIGHT)
+
                 thor_img = I.fromarray(raw_img)
 
                 tk_thor_img = customtkinter.CTkImage(translation_img, size=(np.shape(translation_img)[1],
                                                                                 np.shape(translation_img)[0]))
 
                 file_name = f'{self.current_directory}/{pattern_list[i-1][0][0]}/{pattern_list[i-1][0][1]}.TIF'
+                if os.path.isfile(file_name):
+                    self.patient_entry.configure(state='normal')
+                    while os.path.isfile(file_name):
 
-                while os.path.isfile(file_name):
-                    self.patient_entry.insert('end', '_1')
-                    external_functions.create_patient_directory(self.patient_entry.get(), modes=['SFDI'])
-                    self.renew_current_directory('SFDI')
-                    file_name = f'{self.current_directory}/{pattern_list[i - 1][0][0]}/{pattern_list[i - 1][0][1]}.TIF'
+                        self.patient_entry.insert('end', '_1')
+                        external_functions.create_patient_directory(self.patient_entry.get(), modes=['SFDI'])
+                        self.renew_current_directory('SFDI')
+                        file_name = f'{self.current_directory}/{pattern_list[i - 1][0][0]}/{pattern_list[i - 1][0][1]}.TIF'
+                    self.patient_entry.configure(state='disabled')
 
                 if i != 0:
                     thor_img.save(file_name)
 
-
                 self.pattern_copy.configure(image=tk_thor_img)
-
                 self.pattern_copy.update()
-        self.insert_log('SFDI')
+
+        self.log_frame.insert_log('SFDI')
+        print("Now stopping ThorCam acquisition")
+        start_time = time.time()
         self.thor_camera.cam.stop_acquisition()
+        self.after(2000)
+        external_functions.change_button_state(self, block=False)
+        #print(f"Elapsed time after closing: {time.time() - start_time:.2f} seconds")
+        #print("Camera is acquiring after stopping:", self.thor_camera.cam.acquisition_in_progress())
+       # print("Now acquisition is stopped")
 
 
-    def animation_stop(self):
-
-        self.animation = False
+    # def animation_stop(self):
+    #
+    #     self.animation = False
 
 
 if __name__ == "__main__":

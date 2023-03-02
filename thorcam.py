@@ -8,13 +8,8 @@ class Thorcam():
     def __init__(self, parent):
         self.cam = None
 
-        #self.width, self.height = 800, 600
         self.open = False
         self.parent = parent
-        # try:
-        #     #self.open_camera()
-        # except:
-        #     1
 
     def open_camera(self):
         self.release_camera()

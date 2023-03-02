@@ -12,33 +12,34 @@ customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "gre
 
 
 
-def read_patterns_paths(colors=['red',
-                                'green',
-                                #'blue'
+def read_patterns_paths(colors=[
+                                'red',
+                               # 'green',
+                               # 'blue'
 ],
-                        freqs=['00',
-                               '01',
+                        freqs=[#'00',
                                '02',
-                               '04',
+                              # '04',
                                '06',
-                             #  '08',
+                              ## '08',
                                '10',
                                '12',
-                               '14',
+                             ##  '14',
                                '18',
-                               #'22',
+                              # '22',
                                '26',
-                              # '32',
-                               '34',
-                               #'36',
+                               '32',
+                               #'34',
+                               '36',
                                '40',
                                '44',
                                '99'],
-                        factors=[0.45, 0.55, 0.75],
+                        factors=[0.45, 0.6, 0.8],
                         patterns_folder='C:/Users/madpl/Documents/sfdi/projector'):
     '''
-    reads patterns to a dictionary
-    '''
+        reads patterns to a dictionary
+        '''
+    #'01',
 
     patterns_dict = {}
     for color, factor in zip(colors[:], factors):
@@ -80,6 +81,7 @@ class Projection(customtkinter.CTkToplevel):
         img_name = list(self.parent.patterns.values())[0]
 
         with I.open(img_name[0]) as im:
+
             enhancer = ImageEnhance.Brightness(im)
 
             # gives original image
