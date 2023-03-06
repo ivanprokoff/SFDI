@@ -6,32 +6,32 @@ from pathlib import Path
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
-freqs = ['01', '02', '04', '06', '10', '12', '14', '18', '26', '34', '40', '44']
+freqs = ['01', '02', '04', '06', '10',  '14', '18', '26', '34', '40']
 
 
 def read_patterns_paths(colors=[
     'red',
-    'green',
+   'green',
     'blue'
 ],
-        freqs=[#'01',
-               #'02',
-               #'04',
-               #'06',
+        freqs=['01',
+               '02',
+               '04',
+               '06',
                ## '08',
-              # '10',
+               '10',
                #  '12',
-               #  '14',
+                 '14',
                 '18',
                # # '22',
-               #  '26',
+                 '26',
                # # '32',
-               #  '34',
-                 '36',
+                 '34',
+                # '36',
                  '40',
-               #  '44',
+                 #'44',
                '99'],
-        factors=[0.50, 0.55, 0.65],
+        factors=[0.42, 0.54, 0.62],
         patterns_folder='C:/Users/madpl/Documents/sfdi/projector'):
     """Reads paths to patterns for translation and saves them into a dictionary"""
 

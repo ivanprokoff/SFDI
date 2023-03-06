@@ -163,6 +163,10 @@ class App(customtkinter.CTk):
                 thor_img = I.fromarray(raw_img).transpose(I.FLIP_LEFT_RIGHT)
                 draw = ImageDraw.Draw(thor_img)
                 draw.rectangle(((625 // 2, 1080 // 2), (380 // 2, 850 // 2)), fill=None, outline=255)
+
+                draw = ImageDraw.Draw(thor_img)
+                draw.rectangle(((570 // 2, 570 // 2), (510 // 2, 490 // 2)), fill=None, outline=255)
+
                 tk_thor_img = customtkinter.CTkImage(thor_img, size=(np.shape(raw_img)[1],
                                                                      np.shape(raw_img)[0]
                                                                      )
@@ -217,15 +221,17 @@ class App(customtkinter.CTk):
             self.projection_window.pattern_window['image'] = img
             self.projection_window.pattern_window.configure(image=img)
             self.projection_window.update()
-
-
-
+            self.after(45)
 
             raw_img = self.thor_camera.get_frame()
 
             if raw_img is not None:
                 translation_img = (raw_img.T.astype('float')[::2, ::2] * 255 // 1023).astype('uint8')
                 translation_img = I.fromarray(translation_img).transpose(I.FLIP_LEFT_RIGHT)
+
+                draw = ImageDraw.Draw(translation_img)
+                draw.rectangle(((570//2, 570//2), (510//2, 490//2)), fill=None, outline=255)
+
                 thor_img = I.fromarray(raw_img)
                 tk_thor_img = customtkinter.CTkImage(translation_img, size=(np.shape(translation_img)[1],
                                                                             np.shape(translation_img)[0]))
@@ -246,6 +252,7 @@ class App(customtkinter.CTk):
 
                 self.pattern_copy.configure(image=tk_thor_img)
                 self.pattern_copy.update()
+                self.after(25)
 
             if blue_flag and 'blue' in img_name[0]:
                 self.thor_camera.change_exposition(100)

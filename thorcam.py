@@ -24,7 +24,7 @@ class Thorcam():
     def get_frame(self):
         """Reads the last frame"""
         self.cam.send_software_trigger()
-        self.parent.projection_window.after(10)
+        self.parent.projection_window.after(35)
         self.cam.wait_for_frame(since='lastread', nframes=1)
         img = self.cam.read_newest_image()
 
