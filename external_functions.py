@@ -69,8 +69,10 @@ def change_button_state(parent, block=True):
         parent.sidebar_frame.thor_button.configure(state='disabled')
         parent.sidebar_frame.open_thor_button.configure(state='disabled')
         parent.tabview.exposure_entry.configure(state='disabled')
+        parent.tabview.sfdi_button.configure(state='disabled')
 
     else:
+        parent.after(3000)
         parent.patient_entry.configure(state='normal')
         parent.sidebar_frame.folder_button.configure(state='normal')
         parent.sidebar_frame.white_button.configure(state='normal')
@@ -79,5 +81,6 @@ def change_button_state(parent, block=True):
         parent.sidebar_frame.thor_button.configure(state='normal')
         parent.sidebar_frame.open_thor_button.configure(state='normal')
         parent.tabview.exposure_entry.configure(state='normal')
+        parent.tabview.sfdi_button.configure(state='normal')
 
     parent.after(50, parent.update)

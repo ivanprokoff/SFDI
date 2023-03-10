@@ -89,17 +89,15 @@ class App(customtkinter.CTk):
         while self.animation and self.flag and self.camera.cap:
 
             frame = self.camera.get_frame()
-
-            frame = cv2.flip(frame, 1)
-            frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
-            frame = cv2.flip(frame, 0)
-            frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
-
-            frame = frame[:, :, ::-1]
-
-            pil_img = I.fromarray(frame)
-
             if frame is not None:
+                frame = cv2.flip(frame, 1)
+                frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+                frame = cv2.flip(frame, 0)
+                frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+
+                frame = frame[:, :, ::-1]
+
+                pil_img = I.fromarray(frame)
                 img = customtkinter.CTkImage(pil_img, size=(np.shape(pil_img)[1], np.shape(pil_img)[0]))
 
                 self.pattern_copy['image'] = img
@@ -155,7 +153,7 @@ class App(customtkinter.CTk):
     def translate_thor_cam(self):
         """Translates thorcam view"""
         self.flag = True
-        while self.flag and self.thor_camera.open:
+        while self.flag and self.thor_camera.cam is not None and self.thor_camera.open:
             raw_img = self.thor_camera.get_frame()
             if raw_img is not None:
                 raw_img = (raw_img.astype('float')[::2, ::2].T * 255 // 1023).astype('uint8')
@@ -262,7 +260,7 @@ class App(customtkinter.CTk):
 
         self.log_frame.insert_log('SFDI')
         self.thor_camera.cam.stop_acquisition()
-        self.after(3000)
+        self.after(10)
         external_functions.change_button_state(self, block=False)
 
 
