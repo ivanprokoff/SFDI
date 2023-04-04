@@ -10,6 +10,7 @@ from projection import Projection, read_patterns_paths
 from rgb_cam import Camera
 from thorcam import Thorcam
 from frames import Side_Frame, Translation, TabWindow, Log_Window
+import time
 
 customtkinter.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -119,7 +120,7 @@ class App(customtkinter.CTk):
         if self.thor_camera.open:
             self.renew_current_directory('Infrared')
             img = self.thor_camera.get_frame()
-            filename = f'{self.current_directory}/{self.tabview.infrared_name_entry.get()}_{self.tabview.exposure_entry.get()}_1.TIF '
+            filename = f'{self.current_directory}/{self.tabview.infrared_name_entry.get()}_{self.tabview.exposure_entry.get()}_1.TIF'
 
             for i in range(1, 10):
 
@@ -219,7 +220,7 @@ class App(customtkinter.CTk):
             self.projection_window.pattern_window['image'] = img
             self.projection_window.pattern_window.configure(image=img)
             self.projection_window.update()
-            self.after(45)
+            self.after(30)
 
             raw_img = self.thor_camera.get_frame()
 
@@ -250,7 +251,7 @@ class App(customtkinter.CTk):
 
                 self.pattern_copy.configure(image=tk_thor_img)
                 self.pattern_copy.update()
-                self.after(25)
+                self.after(15)
 
             if blue_flag and 'blue' in img_name[0]:
                 self.thor_camera.change_exposition(100)
@@ -259,9 +260,11 @@ class App(customtkinter.CTk):
                 self.after(100)
 
         self.log_frame.insert_log('SFDI')
-        self.thor_camera.cam.stop_acquisition()
-        self.after(10)
+       # self.after(2000)
+        #self.thor_camera.cam.stop_acquisition()
+        #self.after(2000)
         external_functions.change_button_state(self, block=False)
+        self.after(2000)
 
 
 if __name__ == "__main__":

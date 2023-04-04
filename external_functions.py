@@ -2,7 +2,7 @@ from datetime import datetime
 import os
 
 
-# import photo_pipeline_2
+#import photo_pipeline_2
 
 
 def create_today_directory(main_path='C:/Users/madpl/clinic_data'):
@@ -47,8 +47,9 @@ def return_current_directory(patient_id, mode='SFDI', main_path='C:/Users/madpl/
 def predict_hb(parent):
     """Class docstrings go here."""
     1
-    # parent.renew_current_directory()
-    # folder_photo = f'{parent.current_directory}/Photo'
+    # parent.renew_current_directory(mode='Photo')
+    #
+    # folder_photo = f'{parent.current_directory}'
     #
     # pred_dict = photo_pipeline_2.prediction_pipeline.pipeline_for_folder(folder_photo)
     # print(folder_photo)
@@ -72,7 +73,7 @@ def change_button_state(parent, block=True):
         parent.tabview.sfdi_button.configure(state='disabled')
 
     else:
-        parent.after(3000)
+        parent.after(100)
         parent.patient_entry.configure(state='normal')
         parent.sidebar_frame.folder_button.configure(state='normal')
         parent.sidebar_frame.white_button.configure(state='normal')
