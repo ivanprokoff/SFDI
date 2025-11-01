@@ -186,10 +186,10 @@ class TabWindow(customtkinter.CTkTabview):
         self.rgb_photo_button.grid(row=0, column=0, columnspan=2, padx=(70, 20), pady=(40, 10), sticky="e")
 
         self.predict_hb_button = customtkinter.CTkButton(master=self.tab("Photo"), fg_color="transparent",
-                                                         text_color=("gray10", "#DCE4EE"), text='Predict_hb',
+                                                         text_color=("gray10", "#DCE4EE"), text='Predict Hb',
                                                          border_width=1,
                                                          command=lambda *args: [
-                                                             predict_hb(parent),
+                                                             predict_hb(parent.log_frame),
                                                          ])
         self.predict_hb_button.grid(row=1, column=0, columnspan=2, padx=(70, 20), pady=(10, 10), sticky="w")
 

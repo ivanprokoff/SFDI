@@ -10,9 +10,9 @@ freqs = ['01', '02', '04', '06', '10',  '14', '18', '26', '34', '40']
 
 
 def read_patterns_paths(colors=[
-    'red',
-   'green',
-    'blue'
+ 'green',
+ 'blue',
+ 'red'
 ],
         freqs=['01',
                '02',

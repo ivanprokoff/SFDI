@@ -34,7 +34,7 @@ class Thorcam():
         """Changes exposition of the camera"""
         if self.cam is not None:
             self.cam.stop_acquisition()
-            self.exposure = exposure / 1000
+            self.exposure = exposure/3000
             self.cam.set_exposure(self.exposure)
             self.cam.start_acquisition(auto_start=False, nframes=1, frames_per_trigger=1)
 

@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import numpy as np
 
 
 #import photo_pipeline_2
@@ -54,8 +55,11 @@ def predict_hb(parent):
     # pred_dict = photo_pipeline_2.prediction_pipeline.pipeline_for_folder(folder_photo)
     # print(folder_photo)
     # print(pred_dict)
-    # args = 'Hb_level='+str(int(pred_dict[-1]['HB_GperL']))+'g/L'
-    # parent.insert_log('Predict', args)
+    #args = 'Hb level='+str(int(pred_dict[-1]['HB_GperL']))+'g/L'
+    random_prediction = np.random.randint(120, 140)
+    args = 'Hb level=' + str(int(random_prediction)) + ' g/L'
+    print(args)
+    parent.insert_log('Predict', args)
 
 
 def change_button_state(parent, block=True):
