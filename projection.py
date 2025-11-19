@@ -9,7 +9,7 @@ customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "gre
 freqs = ['01', '02', '04', '06', '10',  '14', '18', '26', '34', '40']
 
 
-def read_patterns_paths(colors=[
+def  read_patterns_paths(colors=[
  'green',
  'blue',
  'red'

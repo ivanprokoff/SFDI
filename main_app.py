@@ -16,7 +16,7 @@ import time
 customtkinter.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
-PATTERN_COORDS_TO_SAVE = (150,850,150,650) #bot,top,left,right or "upper","lower", left, right in PIL notation
+PATTERN_COORDS_TO_SAVE = (100,900,0,800) #bot,top,left,right or "upper","lower", left, right in PIL notation
 
 def save_sfdi_image(thor_img, file_name, save_only_pattern_part=False,
                     pattern_coords=None):
@@ -205,11 +205,36 @@ class App(customtkinter.CTk):
                 raw_img = (raw_img.astype('float')[::2, ::2].T * 255 // 1023).astype('uint8')
 
                 thor_img = I.fromarray(raw_img).transpose(I.FLIP_LEFT_RIGHT)
-                draw = ImageDraw.Draw(thor_img)
-                draw.rectangle(((625 // 2, 1080 // 2), (380 // 2, 850 // 2)), fill=None, outline=255)
+
+                # draw = ImageDraw.Draw(thor_img)
+                # draw.rectangle(((625 // 2, 1080 // 2), (380 // 2, 850 // 2)), fill=None, outline=255)
+                #
+                # draw = ImageDraw.Draw(thor_img)
+                # draw.rectangle(((570 // 2, 570 // 2), (510 // 2, 490 // 2)), fill=None, outline=255)
 
                 draw = ImageDraw.Draw(thor_img)
-                draw.rectangle(((570 // 2, 570 // 2), (510 // 2, 490 // 2)), fill=None, outline=255)
+                draw.rectangle(((230, 250), (270, 290)), fill=None, outline=255)
+
+                draw = ImageDraw.Draw(thor_img)
+                draw.rectangle(((320, 250), (360, 290)), fill=None, outline=255)
+
+                draw = ImageDraw.Draw(thor_img)
+                draw.rectangle(((230, 90), (270, 130)), fill=None, outline=255)
+
+                draw = ImageDraw.Draw(thor_img)
+                draw.rectangle(((320, 90), (360, 130)), fill=None, outline=255)
+
+                w,h = raw_img.shape
+                roi_height = int(800/1024*h)
+                roi_width = int(800/1280*w)
+                roi_bot = int(100/1024*h)
+                roi_left = 0
+                draw = ImageDraw.Draw(thor_img)
+                draw.rectangle(((roi_bot,roi_left),(
+                                                     roi_height+roi_bot,roi_left+roi_width)), fill=None, outline=255)
+
+
+
 
                 tk_thor_img = customtkinter.CTkImage(thor_img, size=(np.shape(raw_img)[1],
                                                                      np.shape(raw_img)[0]
