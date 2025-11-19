@@ -69,6 +69,8 @@ class App(customtkinter.CTk):
 
         self.camera = Camera(self)
         self.thor_camera = Thorcam(self)
+        self.ogt_running = False
+        self.ogt_cancel_requested = False
 
         """
         SIDEBAR FRAME
@@ -326,7 +328,98 @@ class App(customtkinter.CTk):
         #self.after(2000)
         external_functions.change_button_state(self, block=False)
         self.after(2000)
+        
 
+        def start_ogt(self):
+            if self.ogt_running:
+                self.log_frame.insert_log('OGT', 'OGT уже запущен!')
+                return
+
+            try:
+                total_minutes = float(self.tabview.ogt_duration_entry.get())
+                interval_sec = float(self.tabview.ogt_interval_entry.get())
+            except ValueError:
+                self.log_frame.insert_log('Exception', 'Неверные значения длительности или интервала!')
+                return
+
+            if total_minutes <= 0 or interval_sec < 10:  # минимум 10 сек между измерениями
+                self.log_frame.insert_log('Exception', 'Некорректные параметры OGT')
+                return
+
+            self.ogt_running = True
+            self.ogt_cancel_requested = False
+            self.tabview.ogt_button.configure(state="disabled")
+            self.tabview.ogt_stop_button.configure(state="normal")
+
+            self.log_frame.insert_log('OGT', f'Запуск OGT: {total_minutes} мин, интервал {interval_sec} сек')
+
+            # Запускаем в отдельном потоке, чтобы не блокировать GUI
+            import threading
+            threading.Thread(target=self.begin_ogt, args=(total_minutes, interval_sec), daemon=True).start()
+
+
+    def stop_ogt(self):
+        if not self.ogt_running:
+            return
+
+        self.ogt_cancel_requested = True
+        self.log_frame.insert_log('OGT', 'Остановка OGT по запросу пользователя...')
+
+
+    def begin_ogt(self, total_minutes: float, interval_sec: float):
+        """
+        Основной цикл OGT: делает SFDI-измерения с заданным интервалом в течение total_minutes
+        """
+        if not self.thor_camera.cam or not self.thor_camera.open:
+            self.log_frame.insert_log('Exception', 'Камера Thorlabs не подключена!')
+            self._finish_ogt()
+            return
+
+        start_time = time.time()
+        end_time = start_time + total_minutes * 60
+        measurement_count = 0
+
+        while time.time() < end_time and not self.ogt_cancel_requested:
+            measurement_count += 1
+            current_time = time.strftime("%H_%M")  # например, 14_35
+            self.log_frame.insert_log('OGT', f'Измерение {measurement_count} в {current_time}')
+
+            # Создаём папку с именем времени
+            patient = self.patient_entry.get().strip() or "Unknown"
+            base_dir = os.path.join("Patients", patient, "SFDI", current_time)
+            os.makedirs(base_dir, exist_ok=True)
+
+            # Важно: временно переопределяем current_directory для одного цикла SFDI
+            old_directory = self.current_directory
+            self.current_directory = base_dir
+
+            try:
+                # Запускаем один полный SFDI-цикл
+                self.begin_sfdi()  # используем уже существующий метод!
+                
+                # Ждём до следующего измерения
+                wait_until = time.time() + interval_sec
+                while time.time() < wait_until and not self.ogt_cancel_requested:
+                    time.sleep(0.5)
+
+            except Exception as e:
+                self.log_frame.insert_log('Exception', f'Ошибка в OGT-цикле: {e}')
+            finally:
+                self.current_directory = old_directory  # восстанавливаем
+
+        self._finish_ogt()
+        if self.ogt_cancel_requested:
+            self.log_frame.insert_log('OGT', 'OGT остановлен пользователем')
+        else:
+            self.log_frame.insert_log('OGT', f'OGT завершён. Выполнено {measurement_count} измерений')
+
+
+    def _finish_ogt(self):
+        """Внутренняя функция завершения OGT"""
+        self.ogt_running = False
+        self.ogt_cancel_requested = False
+        self.after(0, lambda: self.tabview.ogt_button.configure(state="normal"))
+        self.after(0, lambda: self.tabview.ogt_stop_button.configure(state="disabled"))
 
 if __name__ == "__main__":
     external_functions.create_today_directory()

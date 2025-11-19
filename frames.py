@@ -215,6 +215,28 @@ class TabWindow(customtkinter.CTkTabview):
         self.sfdi_button.grid(row=1, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
         self.stop_button.grid(row=2, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
 
+        self.ogt_frame = customtkinter.CTkFrame(self)
+        self.ogt_frame.grid(row=10, column=0, columnspan=3, pady=20, sticky="ew")
+        customtkinter.CTkLabel(self.ogt_frame, text="OGT Test").grid(row=0, column=0, columnspan=3, pady=5)
+
+        customtkinter.CTkLabel(self.ogt_frame, text="Длительность теста (мин)").grid(row=1, column=0, columnspan=5, pady=5)
+        self.ogt_duration_entry = customtkinter.CTkEntry(self.ogt_frame, width=80)
+        self.ogt_duration_entry.grid(row=1, column=1, padx=5)
+        self.ogt_duration_entry.insert(0, "60")
+
+        customtkinter.CTkLabel(self.ogt_frame, text="Интервал между измерениями (сек)").grid(row=2, column=0, padx=5, pady=5)
+        self.ogt_interval_entry = customtkinter.CTkEntry(self.ogt_frame, width=80)
+        self.ogt_interval_entry.grid(row=2, column=1, padx=5)
+        self.ogt_interval_entry.insert(0, "300")
+
+        self.ogt_button = customtkinter.CTkButton(self.ogt_frame, text="Запустить OGT", command=self.start_ogt)
+        self.ogt_button.grid(row=3, column=0, columnspan=3, pady=10)
+
+        self.ogt_stop_button = customtkinter.CTkButton(self.ogt_frame, text="Остановить OGT", command=self.stop_ogt, fg_color="red")
+        self.ogt_stop_button.grid(row=4, column=0, columnspan=3, pady=5)
+        self.ogt_stop_button.configure(state="disabled")
+
+
     def fill_entry(self):
         """Fills the exposition entry """
         patient = self.parent.patient_entry.get()
