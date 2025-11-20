@@ -12,6 +12,7 @@ from rgb_cam import Camera
 from thorcam import Thorcam
 from frames import Side_Frame, Translation, TabWindow, Log_Window
 import time
+import tkinter
 
 customtkinter.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -282,67 +283,69 @@ class App(customtkinter.CTk):
         else:
             self.log_frame.insert_log('Exception')
             return
+        self.check_quality()
+        if tkinter.messagebox.askyesno("Proceed?", "Quality check done. Proceed with SFDI?"):
+            for i, (key, img_name) in enumerate(pattern_list[:]):
+                if not self.flag:
+                    self.projection_window.set_background()
+                    break
+                with I.open(img_name[0]) as im:
 
-        for i, (key, img_name) in enumerate(pattern_list[:]):
-            if not self.flag:
-                self.projection_window.set_background()
-                break
-            with I.open(img_name[0]) as im:
+                    enhancer = ImageEnhance.Brightness(im)
+                    img = enhancer.enhance(img_name[1])
+                img = customtkinter.CTkImage(img, size=(np.shape(img)[1], np.shape(img)[0]))
 
-                enhancer = ImageEnhance.Brightness(im)
-                img = enhancer.enhance(img_name[1])
-            img = customtkinter.CTkImage(img, size=(np.shape(img)[1], np.shape(img)[0]))
+                self.projection_window.pattern_window['image'] = img
+                self.projection_window.pattern_window.configure(image=img)
+                self.projection_window.update()
+                self.after(int(time_multiplication_factor*30))
 
-            self.projection_window.pattern_window['image'] = img
-            self.projection_window.pattern_window.configure(image=img)
-            self.projection_window.update()
-            self.after(int(time_multiplication_factor*30))
+                raw_img = self.thor_camera.get_frame()
 
-            raw_img = self.thor_camera.get_frame()
+                if raw_img is not None:
+                    translation_img = (raw_img.T.astype('float')[::2, ::2] * 255 // 1023).astype('uint8')
+                    translation_img = I.fromarray(translation_img).transpose(I.FLIP_LEFT_RIGHT)
 
-            if raw_img is not None:
-                translation_img = (raw_img.T.astype('float')[::2, ::2] * 255 // 1023).astype('uint8')
-                translation_img = I.fromarray(translation_img).transpose(I.FLIP_LEFT_RIGHT)
+                    draw = ImageDraw.Draw(translation_img)
+                    draw.rectangle(((570//2, 570//2), (510//2, 490//2)), fill=None, outline=255)
 
-                draw = ImageDraw.Draw(translation_img)
-                draw.rectangle(((570//2, 570//2), (510//2, 490//2)), fill=None, outline=255)
+                    thor_img = I.fromarray(raw_img)
+                    tk_thor_img = customtkinter.CTkImage(translation_img, size=(np.shape(translation_img)[1],
+                                                                                np.shape(translation_img)[0]))
 
-                thor_img = I.fromarray(raw_img)
-                tk_thor_img = customtkinter.CTkImage(translation_img, size=(np.shape(translation_img)[1],
-                                                                            np.shape(translation_img)[0]))
+                    file_name = f'{self.current_directory}/{pattern_list[i - 1][0][0]}/{pattern_list[i - 1][0][1]}.TIF'
 
-                file_name = f'{self.current_directory}/{pattern_list[i - 1][0][0]}/{pattern_list[i - 1][0][1]}.TIF'
+                    if os.path.isfile(file_name):
+                        self.patient_entry.configure(state='normal')
+                        while os.path.isfile(file_name):
+                            self.patient_entry.insert('end', '_1')
+                            external_functions.create_patient_directory(self.patient_entry.get(), modes=['SFDI'])
+                            self.renew_current_directory('SFDI')
+                            file_name = f'{self.current_directory}/{pattern_list[i - 1][0][0]}/{pattern_list[i - 1][0][1]}.TIF'
+                        self.patient_entry.configure(state='disabled')
 
-                if os.path.isfile(file_name):
-                    self.patient_entry.configure(state='normal')
-                    while os.path.isfile(file_name):
-                        self.patient_entry.insert('end', '_1')
-                        external_functions.create_patient_directory(self.patient_entry.get(), modes=['SFDI'])
-                        self.renew_current_directory('SFDI')
-                        file_name = f'{self.current_directory}/{pattern_list[i - 1][0][0]}/{pattern_list[i - 1][0][1]}.TIF'
-                    self.patient_entry.configure(state='disabled')
-
-                if i != 0:
-                    save_sfdi_image(thor_img, file_name,
-                                    save_only_pattern_part=save_only_pattern_part,
-                                    pattern_coords=PATTERN_COORDS_TO_SAVE)
-
-
-                self.pattern_copy.configure(image=tk_thor_img)
-                self.pattern_copy.update()
-                self.after(int(time_multiplication_factor*15))
+                    if i != 0:
+                        save_sfdi_image(thor_img, file_name,
+                                        save_only_pattern_part=save_only_pattern_part,
+                                        pattern_coords=PATTERN_COORDS_TO_SAVE)
 
 
-            if red_flag and 'red' in img_name[0]:
-                self.thor_camera.change_exposition(red_exposure_time)
-                red_flag = False
-            self.after(int(time_multiplication_factor*20))
+                    self.pattern_copy.configure(image=tk_thor_img)
+                    self.pattern_copy.update()
+                    self.after(int(time_multiplication_factor*15))
 
 
-            # if red_flag and ' red' in img_name[0]:
-            #     self.thor_camera.change_exposition(100)
-            #     red_flag = False
+                if red_flag and 'red' in img_name[0]:
+                    self.thor_camera.change_exposition(red_exposure_time)
+                    red_flag = False
+                self.after(int(time_multiplication_factor*20))
 
+
+                # if red_flag and ' red' in img_name[0]:
+                #     self.thor_camera.change_exposition(100)
+                #     red_flag = False
+        else:
+            return
 
 
         self.log_frame.insert_log('SFDI')
@@ -351,6 +354,37 @@ class App(customtkinter.CTk):
         #self.after(2000)
         external_functions.change_button_state(self, block=False)
         self.after(2000)
+
+    def check_quality(self):
+        """Проверяет качество для каждого цвета перед SFDI."""
+        if not self.thor_camera.open:
+            self.log_frame.insert_log('Exception', 'Thor camera not open')
+            return
+
+        colors = ['green', 'blue', 'red']
+        exposures = [66.68, 66.68, 66.68]  # мс per color
+        test_pattern = list(self.patterns.values())[1][0]  # Первый паттерн для теста
+
+        for color, exp in zip(colors, exposures):
+            self.thor_camera.change_exposition(exp)
+            with I.open(test_pattern) as im:
+                enhancer = ImageEnhance.Brightness(im)
+                img = enhancer.enhance(1)
+            tk_img = customtkinter.CTkImage(img, size=(1920, 1080))
+            self.projection_window.pattern_window.configure(image=tk_img)
+            self.projection_window.update()
+            self.after(50)
+
+            raw_img = self.thor_camera.get_frame()
+            is_good, msg = self.thor_camera.check_frame_quality(raw_img)
+            self.log_frame.insert_log('Quality Check', f"{color.capitalize()}: {msg}")
+
+            if not is_good:
+                # Показать предупреждение
+                tkinter.messagebox.showwarning("Quality Issue",
+                                               f"Problem with {color}: {msg}\nAdjust exposure or pattern brightness.")
+
+        self.projection_window.set_background('black')  # Сброс
 
 
 if __name__ == "__main__":

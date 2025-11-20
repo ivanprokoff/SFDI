@@ -1,5 +1,6 @@
 import pylablib as pll
 from pylablib.devices import Thorlabs
+import numpy as np
 pll.par["devices/dlls/thorlabs_tlcam"] = "path/to/dlls"
 
 
@@ -49,3 +50,26 @@ class Thorcam():
         if self.cam:
             self.cam.stop_acquisition()
 
+    def check_frame_quality(self, frame, max_val=1023, over_thresh=1000, under_thresh=200, over_percent_limit=5,
+                            under_percent_limit=90):
+        """
+        Проверяет кадр на засветы и недоэкспозицию.
+        Возвращает: (is_good: bool, message: str)
+        """
+
+        if frame is None:
+            return False, "No frame captured"
+
+        flat = frame.flatten().astype(float)
+        mean_int = np.mean(flat)
+        over_count = np.sum(flat > over_thresh) / len(flat) * 100
+        under_count = np.sum(flat < under_thresh) / len(flat) * 100
+
+        if over_count > over_percent_limit:
+            return False, f"Overexposure: {over_count:.1f}% pixels > {over_thresh}"
+        if under_count > under_percent_limit:
+            return False, f"Underexposure: {under_count:.1f}% pixels < {under_thresh}, mean={mean_int:.1f}"
+        if mean_int < 300 or mean_int > 900:
+            return False, f"Bad mean intensity: {mean_int:.1f} (should be 300-900)"
+
+        return True, "Frame quality OK"
