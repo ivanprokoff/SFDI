@@ -31,7 +31,7 @@ def  read_patterns_paths(colors=[
                  '40',
                  #'44',
                '99'],
-        factors=[0.42, 0.54, 0.62],
+        factors=[0.42, 0.54, 0.5],    # [0.42, 0.54, 0.62]
         patterns_folder='C:/Users/madpl/Documents/sfdi/projector'):
     """Reads paths to patterns for translation and saves them into a dictionary"""
 
