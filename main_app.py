@@ -355,37 +355,114 @@ class App(customtkinter.CTk):
         external_functions.change_button_state(self, block=False)
         self.after(2000)
 
+    # === ДОБАВЬ ЭТИ МЕТОДЫ В КЛАСС App ===
+
+    def _create_solid_color_image(self, color_rgb, size=(1920, 1080)):
+        """Создаёт сплошное изображение заданного цвета"""
+        img = I.new('RGB', size, color_rgb)
+        return customtkinter.CTkImage(img, size=size)
+
+    def _get_solid_patterns(self):
+        """Возвращает словарь с заливками для каждого цвета"""
+        return {
+            'green': self._create_solid_color_image((0, 255, 0)),  # чистый зелёный
+            'blue': self._create_solid_color_image((0, 0, 255)),  # чистый синий
+            'red': self._create_solid_color_image((255, 0, 0)),  # чистый красный
+        }
+
     def check_quality(self):
-        """Проверяет качество для каждого цвета перед SFDI."""
-        if not self.thor_camera.open:
-            self.log_frame.insert_log('Exception', 'Thor camera not open')
+        """Последовательная проверка качества с реальной задержкой и визуальной заливкой"""
+        if not self.thor_camera.cam or not self.thor_camera.open:
+            tkinter.messagebox.showerror("Ошибка", "Thorlabs камера не открыта!")
             return
 
-        colors = ['green', 'blue', 'red']
-        exposures = [66.68, 66.68, 66.68]  # мс per color
-        test_pattern = list(self.patterns.values())[1][0]  # Первый паттерн для теста
+        # Отключаем кнопку, чтобы нельзя было нажать дважды
+        self.tabview.quality_check_button.configure(state="disabled", text="Проверка...")
 
-        for color, exp in zip(colors, exposures):
-            self.thor_camera.change_exposition(exp)
-            with I.open(test_pattern) as im:
-                enhancer = ImageEnhance.Brightness(im)
-                img = enhancer.enhance(1)
-            tk_img = customtkinter.CTkImage(img, size=(1920, 1080))
-            self.projection_window.pattern_window.configure(image=tk_img)
-            self.projection_window.update()
-            self.after(50)
+        self.quality_check_results = []
+        self.quality_check_colors = ['green', 'blue', 'red']
+        self.quality_check_index = 0
 
-            raw_img = self.thor_camera.get_frame()
-            is_good, msg = self.thor_camera.check_frame_quality(raw_img)
-            self.log_frame.insert_log('Quality Check', f"{color.capitalize()}: {msg}")
+        # ROI (то же, что используется при сохранении)
+        self.quality_roi = (150, 150, 650, 850)  # left, top, right, bottom
 
-            if not is_good:
-                # Показать предупреждение
-                tkinter.messagebox.showwarning("Quality Issue",
-                                               f"Problem with {color}: {msg}\nAdjust exposure or pattern brightness.")
+        # Сплошные заливки
+        self.solid_images = {
+            'green': self._create_solid_color_image((0, 255, 0)),
+            'blue': self._create_solid_color_image((0, 0, 255)),
+            'red': self._create_solid_color_image((255, 0, 0)),
+        }
 
-        self.projection_window.set_background('black')  # Сброс
+        # Экспозиции для теста
+        self.test_exposures = {'green': 66.68, 'blue': 66.68, 'red': 20.0}
 
+        # Запускаем первый шаг
+        self.log_frame.insert_log('Quality Check', 'Запуск проверки качества съёмки...')
+        self._quality_check_step()
+
+    def _quality_check_step(self):
+        """Один шаг проверки: проецирует цвет → ждёт → снимает → анализирует"""
+        if self.quality_check_index >= len(self.quality_check_colors):
+            # Все цвета проверены → финальное сообщение
+            self._quality_check_finish()
+            return
+
+        color = self.quality_check_colors[self.quality_check_index]
+        exp_ms = self.test_exposures[color]
+
+        # 1. Устанавливаем экспозицию
+        self.thor_camera.change_exposition(exp_ms)
+
+        # 2. Проецируем сплошной цвет
+        self.projection_window.pattern_window.configure(image=self.solid_images[color])
+        self.projection_window.update_idletasks()  # принудительно обновляем
+        self.projection_window.update()  # ещё раз — надёжно
+
+        # 3. Ждём, пока проектор покажет (обычно 400–700 мс достаточно)
+        self.after(700, self._capture_and_analyze, color)
+
+    def _capture_and_analyze(self, color):
+        """Снимает кадр и анализирует его"""
+        raw_img = self.thor_camera.get_frame()
+
+        if raw_img is None:
+            msg = "Кадр не получен"
+            is_good = False
+        else:
+            left, top, right, bottom = self.quality_roi
+            roi_img = raw_img[top:bottom, left:right]
+            is_good, msg = self.thor_camera.check_frame_quality(roi_img)
+
+        # Сохраняем результат
+        self.quality_check_results.append((color, is_good, msg))
+        self.log_frame.insert_log('Quality Check', f"{color.capitalize()}: {msg}")
+
+        # Переходим к следующему цвету
+        self.quality_check_index += 1
+        self._quality_check_step()
+
+    def _quality_check_finish(self):
+        """Финальное окно с результатом"""
+        self.projection_window.set_background('black')
+
+        good_colors = [c.capitalize() for c, good, _ in self.quality_check_results if good]
+        bad_colors = [c.capitalize() for c, good, _ in self.quality_check_results if not good]
+
+        if not bad_colors:
+            tkinter.messagebox.showinfo("Готово!", "Все три канала в отличном состоянии!\nМожно начинать SFDI.")
+        else:
+            msg = f"Проблемы в каналах: {', '.join(bad_colors)}\n\n"
+            msg += "Рекомендации:\n"
+            for color, good, text in self.quality_check_results:
+                if not good:
+                    if "Переэкспозиция" in text or "ярко" in text:
+                        msg += f"• {color.capitalize()}: уменьшите экспозицию или яркость проектора\n"
+                    else:
+                        msg += f"• {color.capitalize()}: увеличьте экспозицию или подвиньте объект ближе\n"
+            tkinter.messagebox.showwarning("Требуется коррекция", msg)
+
+        # Включаем кнопку обратно
+        self.tabview.quality_check_button.configure(state="normal", text="Проверить качество")
 
 if __name__ == "__main__":
     external_functions.create_today_directory()

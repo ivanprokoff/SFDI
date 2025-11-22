@@ -215,11 +215,11 @@ class TabWindow(customtkinter.CTkTabview):
         self.tab("SFDI").grid_columnconfigure(0, weight=1)
         self.sfdi_button.grid(row=1, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
         self.stop_button.grid(row=2, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
-        self.quality_button = customtkinter.CTkButton(master=self.tab("SFDI"), fg_color="transparent",
+        self.quality_check_button = customtkinter.CTkButton(master=self.tab("SFDI"), fg_color="transparent",
                                                       text_color=("gray10", "#DCE4EE"), text='Check Quality',
                                                       border_width=1,
                                                       command=parent.check_quality)
-        self.quality_button.grid(row=0, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
+        self.quality_check_button.grid(row=0, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
 
     def fill_entry(self):
         """Fills the exposition entry """
