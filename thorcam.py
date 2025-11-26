@@ -1,5 +1,6 @@
 import pylablib as pll
 from pylablib.devices import Thorlabs
+import numpy as np
 pll.par["devices/dlls/thorlabs_tlcam"] = "path/to/dlls"
 
 
@@ -49,3 +50,30 @@ class Thorcam():
         if self.cam:
             self.cam.stop_acquisition()
 
+    def check_frame_quality(self, frame, over_thresh=950, over_percent_limit=3.0,
+                            under_thresh=100, under_percent_limit=80,
+                            min_mean=150, max_mean=850):
+        """Расширенная проверка кадра ТОЛЬКО в ROI"""
+        if frame is None:
+            return False, "Кадр не получен"
+
+        flat = frame.flatten().astype(np.float32)
+        total_pixels = len(flat)
+        mean_val = np.mean(flat)
+
+        overexposed_pixels = np.sum(flat > over_thresh)
+        underexposed_pixels = np.sum(flat < under_thresh)
+
+        over_percent = overexposed_pixels / total_pixels * 100
+        under_percent = underexposed_pixels / total_pixels * 100
+
+        if over_percent > over_percent_limit:
+            return False, f"Переэкспозиция: {over_percent:.1f}% > {over_thresh}"
+        if under_percent > under_percent_limit:
+            return False, f"Недоэкспозиция: {under_percent:.1f}% < {under_thresh}, среднее={mean_val:.0f}"
+        if mean_val < min_mean:
+            return False, f"Слишком тёмно: среднее={mean_val:.0f} < {min_mean}"
+        if mean_val > max_mean:
+            return False, f"Слишком ярко: среднее={mean_val:.0f} > {max_mean}"
+
+        return True, f"OK (среднее={mean_val:.0f}, переэксп: {over_percent:.1f}%)"

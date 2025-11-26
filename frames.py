@@ -97,7 +97,6 @@ class Log_Window(customtkinter.CTkFrame):
         elif command == 'Infrared':
             line = f'{current_time}      {args}'
         elif command == 'RGB':
-
             line = f'{current_time}      {args}'
         elif command == 'Directory':
             line = f'{current_time}      {self.parent.patient_entry.get()} directory created'
@@ -105,12 +104,15 @@ class Log_Window(customtkinter.CTkFrame):
             line = f'{current_time}      {self.parent.patient_entry.get()} {args}'
         elif command == 'Exception':
             line = f'{current_time}      ThorCam is closed'
+        elif command == "Quality Check":
+            line = f'{current_time}      Качество: {args[0] if args else "проверка завершена"}'
 
         self.parent.text_box.insert('0.0', line + '\n')
 
-        with open(self.log_path, 'a') as f:
+        with open(self.log_path, 'a', encoding='utf-8') as f:
             f.write(line)
             f.write('\n')
+
 
 class Translation(customtkinter.CTkFrame):
     """Class for the frame that translates the view from the cameras"""
@@ -214,6 +216,11 @@ class TabWindow(customtkinter.CTkTabview):
         self.tab("SFDI").grid_columnconfigure(0, weight=1)
         self.sfdi_button.grid(row=1, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
         self.stop_button.grid(row=2, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
+        self.quality_check_button = customtkinter.CTkButton(master=self.tab("SFDI"), fg_color="transparent",
+                                                      text_color=("gray10", "#DCE4EE"), text='Check Quality',
+                                                      border_width=1,
+                                                      command=parent.check_quality)
+        self.quality_check_button.grid(row=0, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
 
     def fill_entry(self):
         """Fills the exposition entry """
