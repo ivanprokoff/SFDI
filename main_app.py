@@ -5,7 +5,7 @@ import numpy as np
 import os.path
 import sys
 import external_functions
-from PIL import ImageEnhance, ImageDraw
+from PIL import ImageEnhance, ImageDraw, ImageFont
 from PIL import Image as I
 from projection import Projection, read_patterns_paths
 from rgb_cam import Camera
@@ -13,6 +13,20 @@ from thorcam import Thorcam
 from frames import Side_Frame, Translation, TabWindow, Log_Window
 import time
 import tkinter
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+import numpy as np
+
+
+try:
+    # Попробуем загрузить шрифт с поддержкой кириллицы
+    font = ImageFont.truetype("arial.ttf", 28)
+except:
+    try:
+        font = ImageFont.truetype("DejaVuSans.ttf", 28)
+    except:
+        font = ImageFont.load_default()  # fallback
 
 customtkinter.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -66,6 +80,11 @@ class App(customtkinter.CTk):
                 self.preloaded_patterns[key] = ctk_img
 
         self.exposure = 66.68 / 1000  # МЕНЯЛИ ДЛЯ УСТРАННЕНИЯ РАССИНХРОНА
+        self.color_exposures_ms = {
+            'green': 40.68,
+            'blue': 66.68,
+            'red': 66.68
+        }
         self.geometry('%dx%d+%d+%d' % (1520, 700, 0, 0))
 
         self.camera = Camera(self)
@@ -197,61 +216,44 @@ class App(customtkinter.CTk):
 
                     break
 
+
     def translate_thor_cam(self):
-        """Translates thorcam view"""
+        """Обновлённый поток камеры с безопасной отрисовкой ROI и текста"""
         self.flag = True
         while self.flag and self.thor_camera.cam is not None and self.thor_camera.open:
             raw_img = self.thor_camera.get_frame()
             if raw_img is not None:
-                raw_img = (raw_img.astype('float')[::2, ::2].T * 255 // 1023).astype('uint8')
+                # Масштабируем 2x (как у тебя было)
+                display_img = (raw_img.astype('float')[::2, ::2].T * 255 // 1023).astype('uint8')
+                display_img = I.fromarray(display_img).transpose(I.FLIP_LEFT_RIGHT)
+                draw = ImageDraw.Draw(display_img)
 
-                thor_img = I.fromarray(raw_img).transpose(I.FLIP_LEFT_RIGHT)
+                # Рисуем ROI и текст ТОЛЬКО во время проверки качества
+                if getattr(self, 'show_roi_overlay', False):
+                    left, top, right, bottom = self.quality_roi
+                    scale = 0.5
+                    rect_coords = [
+                        (left * scale, top * scale),
+                        (right * scale, bottom * scale)
+                    ]
+                    draw.rectangle(rect_coords, outline="yellow", width=4)
 
-                # draw = ImageDraw.Draw(thor_img)
-                # draw.rectangle(((625 // 2, 1080 // 2), (380 // 2, 850 // 2)), fill=None, outline=255)
-                #
-                # draw = ImageDraw.Draw(thor_img)
-                # draw.rectangle(((570 // 2, 570 // 2), (510 // 2, 490 // 2)), fill=None, outline=255)
+                    # Текст на английском (чтобы не падало) или используем безопасный шрифт
+                    color_en = getattr(self, 'current_roi_color', 'unknown').capitalize()
+                    text = f"Check: {color_en}"
 
-                draw = ImageDraw.Draw(thor_img)
-                draw.rectangle(((230, 250), (270, 290)), fill=None, outline=255)
+                    # Безопасная отрисовка текста
+                    try:
+                        draw.text((12, 8), text, fill="yellow", font=font)
+                        draw.text((10, 10), text, fill="black", font=font)  # обводка
+                    except:
+                        # Если совсем ничего не работает — рисуем без текста
+                        pass
 
-                draw = ImageDraw.Draw(thor_img)
-                draw.rectangle(((320, 250), (360, 290)), fill=None, outline=255)
-
-                draw = ImageDraw.Draw(thor_img)
-                draw.rectangle(((230, 90), (270, 130)), fill=None, outline=255)
-
-                draw = ImageDraw.Draw(thor_img)
-                draw.rectangle(((320, 90), (360, 130)), fill=None, outline=255)
-
-                w,h = raw_img.shape
-                roi_height = int(800/1024*h)
-                roi_width = int(800/1280*w)
-                roi_bot = int(100/1024*h)
-                roi_left = 0
-                draw = ImageDraw.Draw(thor_img)
-                draw.rectangle(((roi_bot,roi_left),(
-                                                     roi_height+roi_bot,roi_left+roi_width)), fill=None, outline=255)
-
-
-
-
-                tk_thor_img = customtkinter.CTkImage(thor_img, size=(np.shape(raw_img)[1],
-                                                                     np.shape(raw_img)[0]
-                                                                     )
-
-                                                     )
-
-                self.pattern_copy.configure(image=tk_thor_img)
-
+                tk_img = customtkinter.CTkImage(display_img, size=(display_img.width, display_img.height))
+                self.pattern_copy.configure(image=tk_img)
                 self.pattern_copy.update()
 
-            else:
-
-                black_image = I.new('RGB', (500, 500))
-                img = customtkinter.CTkImage(black_image, size=(500, 500))
-                self.pattern_copy.configure(image=img)
             self.after(30)
 
     def stop(self):
@@ -289,6 +291,9 @@ class App(customtkinter.CTk):
                 if not self.flag:
                     self.projection_window.set_background()
                     break
+                color = key[0]
+                exp_ms = self.color_exposures_ms.get(color, 66.68)
+                self.thor_camera.change_exposition(exp_ms)
                 with I.open(img_name[0]) as im:
 
                     enhancer = ImageEnhance.Brightness(im)
@@ -335,10 +340,10 @@ class App(customtkinter.CTk):
                     self.after(int(time_multiplication_factor*15))
 
 
-                if red_flag and 'red' in img_name[0]:
-                    self.thor_camera.change_exposition(red_exposure_time)
-                    red_flag = False
-                self.after(int(time_multiplication_factor*20))
+                # if red_flag and 'red' in img_name[0]:
+                #    self.thor_camera.change_exposition(red_exposure_time)
+                #    red_flag = False
+                # self.after(int(time_multiplication_factor*20))
 
 
                 # if red_flag and ' red' in img_name[0]:
@@ -355,8 +360,6 @@ class App(customtkinter.CTk):
         external_functions.change_button_state(self, block=False)
         self.after(2000)
 
-    # === ДОБАВЬ ЭТИ МЕТОДЫ В КЛАСС App ===
-
     def _create_solid_color_image(self, color_rgb, size=(1920, 1080)):
         """Создаёт сплошное изображение заданного цвета"""
         img = I.new('RGB', size, color_rgb)
@@ -365,104 +368,192 @@ class App(customtkinter.CTk):
     def _get_solid_patterns(self):
         """Возвращает словарь с заливками для каждого цвета"""
         return {
-            'green': self._create_solid_color_image((0, 255, 0)),  # чистый зелёный
-            'blue': self._create_solid_color_image((0, 0, 255)),  # чистый синий
-            'red': self._create_solid_color_image((255, 0, 0)),  # чистый красный
-        }
-
-    def check_quality(self):
-        """Последовательная проверка качества с реальной задержкой и визуальной заливкой"""
-        if not self.thor_camera.cam or not self.thor_camera.open:
-            tkinter.messagebox.showerror("Ошибка", "Thorlabs камера не открыта!")
-            return
-
-        # Отключаем кнопку, чтобы нельзя было нажать дважды
-        self.tabview.quality_check_button.configure(state="disabled", text="Проверка...")
-
-        self.quality_check_results = []
-        self.quality_check_colors = ['green', 'blue', 'red']
-        self.quality_check_index = 0
-
-        # ROI (то же, что используется при сохранении)
-        self.quality_roi = (150, 150, 650, 850)  # left, top, right, bottom
-
-        # Сплошные заливки
-        self.solid_images = {
             'green': self._create_solid_color_image((0, 255, 0)),
             'blue': self._create_solid_color_image((0, 0, 255)),
             'red': self._create_solid_color_image((255, 0, 0)),
         }
 
-        # Экспозиции для теста
-        self.test_exposures = {'green': 66.68, 'blue': 66.68, 'red': 20.0}
+    def check_quality(self):
+        """Запуск проверки качества с последовательной сменой цветов"""
+        if not self.thor_camera.cam or not self.thor_camera.open:
+            tkinter.messagebox.showerror("Ошибка", "Thorlabs камера не открыта!")
+            return
 
-        # Запускаем первый шаг
-        self.log_frame.insert_log('Quality Check', 'Запуск проверки качества съёмки...')
+        self.tabview.quality_check_button.configure(state="disabled", text="Проверка...")
+
+        self.quality_check_results = []
+        self.quality_check_colors = ['red', 'green', 'blue']
+        self.quality_check_index = 0
+        self.quality_roi = (150, 150, 650, 850)  # left, top, right, bottom
+        self.show_roi_overlay = True
+
+        # Сплошные заливки
+        self.solid_images = {
+            'red': self._create_solid_color_image((255, 0, 0)),
+            'green': self._create_solid_color_image((0, 255, 0)),
+            'blue': self._create_solid_color_image((0, 0, 255)),
+        }
+
+        self.log_frame.insert_log('Quality Check', 'Запуск проверки качества...')
         self._quality_check_step()
 
     def _quality_check_step(self):
-        """Один шаг проверки: проецирует цвет → ждёт → снимает → анализирует"""
+        """Один шаг: проецирует цвет -> ждёт -> снимает -> следующий"""
         if self.quality_check_index >= len(self.quality_check_colors):
-            # Все цвета проверены → финальное сообщение
+            self.show_roi_overlay = False
             self._quality_check_finish()
             return
 
         color = self.quality_check_colors[self.quality_check_index]
-        exp_ms = self.test_exposures[color]
+        self.current_roi_color = color
 
-        # 1. Устанавливаем экспозицию
-        self.thor_camera.change_exposition(exp_ms)
-
-        # 2. Проецируем сплошной цвет
+        # Устанавливаем экспозицию и проецируем
+        self.thor_camera.change_exposition(self.color_exposures_ms[color])
         self.projection_window.pattern_window.configure(image=self.solid_images[color])
-        self.projection_window.update_idletasks()  # принудительно обновляем
-        self.projection_window.update()  # ещё раз — надёжно
+        self.projection_window.update_idletasks()
+        self.projection_window.update()
 
-        # 3. Ждём, пока проектор покажет (обычно 400–700 мс достаточно)
-        self.after(700, self._capture_and_analyze, color)
+        # Даём проектору 1400 мс на полную стабилизацию
+        self.after(1400, self._capture_and_analyze, color)
 
     def _capture_and_analyze(self, color):
-        """Снимает кадр и анализирует его"""
+        """Снимает кадр, анализирует, сохраняет результат"""
         raw_img = self.thor_camera.get_frame()
+        is_good = False
+        msg = "Кадр не получен"
 
-        if raw_img is None:
-            msg = "Кадр не получен"
-            is_good = False
-        else:
-            left, top, right, bottom = self.quality_roi
-            roi_img = raw_img[top:bottom, left:right]
-            is_good, msg = self.thor_camera.check_frame_quality(roi_img)
+        if raw_img is not None:
+            l, t, r, b = self.quality_roi
+            roi = raw_img[t:b, l:r]
+            mean_val = roi.mean()
+            over = np.sum(roi > 950) / roi.size * 100
+            under = np.sum(roi < 100) / roi.size * 100
 
-        # Сохраняем результат
+            is_good = over < 3.0 and 180 < mean_val < 880
+            msg = f"OK (ср. {mean_val:.0f})" if is_good else f"Проблема: пересвет {over:.1f}% / ср. {mean_val:.0f}"
+
+            if not hasattr(self, 'final_quality_frames'):
+                self.final_quality_frames = {}
+            self.final_quality_frames[color] = roi
+
         self.quality_check_results.append((color, is_good, msg))
         self.log_frame.insert_log('Quality Check', f"{color.capitalize()}: {msg}")
 
-        # Переходим к следующему цвету
         self.quality_check_index += 1
         self._quality_check_step()
 
     def _quality_check_finish(self):
-        """Финальное окно с результатом"""
         self.projection_window.set_background('black')
+        self.show_roi_overlay = False
 
-        good_colors = [c.capitalize() for c, good, _ in self.quality_check_results if good]
-        bad_colors = [c.capitalize() for c, good, _ in self.quality_check_results if not good]
+        result_window = customtkinter.CTkToplevel(self)
+        result_window.title("Результаты проверки качества проекции")
+        result_window.geometry("1400x800")
+        result_window.transient(self)
+        result_window.grab_set()
 
-        if not bad_colors:
-            tkinter.messagebox.showinfo("Готово!", "Все три канала в отличном состоянии!\nМожно начинать SFDI.")
-        else:
-            msg = f"Проблемы в каналах: {', '.join(bad_colors)}\n\n"
-            msg += "Рекомендации:\n"
-            for color, good, text in self.quality_check_results:
-                if not good:
-                    if "Переэкспозиция" in text or "ярко" in text:
-                        msg += f"• {color.capitalize()}: уменьшите экспозицию или яркость проектора\n"
-                    else:
-                        msg += f"• {color.capitalize()}: увеличьте экспозицию или подвиньте объект ближе\n"
-            tkinter.messagebox.showwarning("Требуется коррекция", msg)
+        customtkinter.CTkLabel(
+            result_window,
+            text="Проверка качества проекции (ROI)",
+            font=("Arial", 24, "bold")
+        ).pack(pady=(15, 10))
 
-        # Включаем кнопку обратно
+        fig = Figure(figsize=(13, 5), dpi=110)
+        canvas = FigureCanvasTkAgg(fig, result_window)
+        canvas.get_tk_widget().pack(padx=30, pady=10, fill="both", expand=True)
+
+        gs = fig.add_gridspec(1, 3, hspace=0.15, wspace=0.25)
+
+        metrics = []
+
+        for idx, color in enumerate(['red', 'green', 'blue']):
+            ax = fig.add_subplot(gs[0, idx])
+            roi = self.final_quality_frames.get(color)
+
+            if roi is not None:
+                mean_val = roi.mean()
+                over = np.sum(roi > 950) / roi.size * 100
+                under = np.sum(roi < 100) / roi.size * 100
+                std_val = roi.std()
+
+                im = ax.imshow(roi, cmap='hot', vmin=0, vmax=1023)
+                ax.set_title(color.capitalize(), fontsize=18, fontweight='bold', color=color, pad=20)
+                ax.axis('off')
+                fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04, shrink=0.8)
+
+                status = "OK" if (over < 3.0 and 180 < mean_val < 880) else "ПРОБЛЕМА"
+
+                metrics.append({
+                    'color': color.capitalize(),
+                    'mean': mean_val,
+                    'over': over,
+                    'under': under,
+                    'std': std_val,
+                    'status': status
+                })
+            else:
+                ax.text(0.5, 0.5, "НЕТ ДАННЫХ", transform=ax.transAxes,
+                        ha='center', va='center', color='white', fontsize=20, weight='bold',
+                        bbox=dict(boxstyle="round", facecolor="red", alpha=0.8))
+                ax.axis('off')
+                metrics.append({'color': color.capitalize(), 'status': "ОШИБКА"})
+
+        canvas.draw()
+
+        table_frame = customtkinter.CTkFrame(result_window)
+        table_frame.pack(pady=15, padx=60, fill="x")
+
+        headers = "Канал    │   Среднее   │ Пересвет % │ Недосвет % │ Разброс │   Статус"
+        customtkinter.CTkLabel(
+            table_frame,
+            text=headers,
+            font=("Consolas", 14, "bold"),
+            fg_color="#2b2b2b", corner_radius=8, padx=10, pady=8
+        ).pack(pady=5)
+
+        all_good = True
+        for m in metrics:
+            if m['status'] != 'OK':
+                all_good = False
+
+            color_fg = "#00ff00" if m['status'] == 'OK' else "#ff4444"
+            line = (f"{m['color']:6} │ "
+                    f"{m['mean']:8.0f} │ "
+                    f"{m['over']:7.1f} │ "
+                    f"{m['under']:7.1f} │ "
+                    f"{m['std']:6.0f} │ "
+                    f"{m['status']:8}")
+
+            customtkinter.CTkLabel(
+                table_frame,
+                text=line,
+                font=("Consolas", 13),
+                text_color=color_fg,
+                padx=10, pady=4
+            ).pack()
+
+        verdict_text = "ГОТОВО К SFDI!" if all_good else "ТРЕБУЕТСЯ КОРРЕКЦИЯ ЭКСПОЗИЦИИ"
+        verdict_color = "#00ff00" if all_good else "#ff4444"
+
+        customtkinter.CTkLabel(
+            result_window,
+            text=verdict_text,
+            font=("Arial", 22, "bold"),
+            text_color=verdict_color
+        ).pack(pady=20)
+
+        customtkinter.CTkButton(
+            result_window,
+            text="Закрыть",
+            width=200, height=40,
+            command=result_window.destroy
+        ).pack(pady=10)
+
+        if hasattr(self, 'final_quality_frames'):
+            del self.final_quality_frames
+
         self.tabview.quality_check_button.configure(state="normal", text="Проверить качество")
+
 
 if __name__ == "__main__":
     external_functions.create_today_directory()

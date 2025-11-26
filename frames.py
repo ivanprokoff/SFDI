@@ -104,14 +104,15 @@ class Log_Window(customtkinter.CTkFrame):
             line = f'{current_time}      {self.parent.patient_entry.get()} {args}'
         elif command == 'Exception':
             line = f'{current_time}      ThorCam is closed'
-        else:
-            line = '1'
+        elif command == "Quality Check":
+            line = f'{current_time}      Качество: {args[0] if args else "проверка завершена"}'
 
         self.parent.text_box.insert('0.0', line + '\n')
 
-        with open(self.log_path, 'a') as f:
+        with open(self.log_path, 'a', encoding='utf-8') as f:
             f.write(line)
             f.write('\n')
+
 
 class Translation(customtkinter.CTkFrame):
     """Class for the frame that translates the view from the cameras"""
