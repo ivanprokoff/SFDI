@@ -6,7 +6,7 @@ import sys
 
 # ========================= НАСТРОЙКИ =========================
 WINDOW_TITLE = "Clinical app"  # Название окна
-TOTAL_DURATION_MINUTES = 120  # Сколько минут работать (например 120 = 2 часа)
+TOTAL_DURATION_MINUTES = 6  # Сколько минут работать (например 120 = 2 часа)
 # или можно задать количество циклов:
 # TOTAL_CYCLES = 60                    # вместо TOTAL_DURATION_MINUTES
 
@@ -23,14 +23,20 @@ CREATE_DIR_BUTTON_Y = 120
 SFDI_BUTTON_X = 697  # координата кнопки SFDI
 SFDI_BUTTON_Y = 171
 
-SFDI_DIRECTORY = 'name=TEST_type=OGTT-7_time='  # Имя папки измерений
+
+SFDI_DIRECTORY = 'name=Georgy_type=repr-1_time='
+
+
+# SFDI_DIRECTORY = 'name=phant-cl-2_type=repr-cont_time='  # Имя папки измерений
+##SFDI_DIRECTORY = 'name=Ilia_type=BTTT_time='  # Имя папки измерений
+
 # =============================================================
 
 def activate_clinical_window():
     windows = gw.getWindowsWithTitle(WINDOW_TITLE)
     if not windows:
         print(f"[!] Окно '{WINDOW_TITLE}' не найдено!")
-        return False
+        return Falsex
     window = windows[0]
     if window.isMinimized:
         window.restore()

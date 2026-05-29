@@ -11,6 +11,9 @@ from projection import Projection, read_patterns_paths
 from rgb_cam import Camera
 from thorcam import Thorcam
 from frames import Side_Frame, Translation, TabWindow, Log_Window
+import csv
+from datetime import datetime
+import os
 import time
 
 customtkinter.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
@@ -54,7 +57,12 @@ class App(customtkinter.CTk):
         self.first_frame = True
         self.current_directory = None
         self.title("Clinical app")
-        self.patterns = read_patterns_paths()
+
+        # Added: use_zhang
+        #Changed: patterns read
+        self.use_zhang = True
+        self.patterns = read_patterns_paths(use_zhang=self.use_zhang)
+
         self.iter_patterns = iter(self.patterns)
         self.preloaded_patterns = {}
         for key, (path, factor) in self.patterns.items():
@@ -65,6 +73,7 @@ class App(customtkinter.CTk):
                 self.preloaded_patterns[key] = ctk_img
 
         self.exposure = 66.68 / 1000  # МЕНЯЛИ ДЛЯ УСТРАННЕНИЯ РАССИНХРОНА
+        self.pattern_factors = [0.42, 0.54, 0.62]
         self.geometry('%dx%d+%d+%d' % (1520, 700, 0, 0))
 
         self.camera = Camera(self)
@@ -118,6 +127,32 @@ class App(customtkinter.CTk):
 
         # self.projection_window.set_first_picture()
         self.infrared_name_entry = self.tabview.infrared_name_entry
+
+    def toggle_zhang(self):
+        # Берем актуальное значение прямо со свитча
+        self.use_zhang = self.tabview.zhang_var.get()
+
+        # Правильный вызов логгера (передаем 'Infrared' как категорию, или оставь как есть,
+        # так как мы добавили блок else в frames.py)
+        self.log_frame.insert_log('Infrared', f"use_zhang changed to {self.use_zhang}")
+
+        # перечитать паттерны
+        self.patterns = read_patterns_paths(use_zhang=self.use_zhang)
+
+        self.iter_patterns = iter(self.patterns)
+        self.preloaded_patterns = {}
+
+        for key, (path, factor) in self.patterns.items():
+            with I.open(path) as im:
+                enhancer = ImageEnhance.Brightness(im)
+                enhanced_img = enhancer.enhance(factor)
+
+                ctk_img = customtkinter.CTkImage(
+                    enhanced_img,
+                    size=(enhanced_img.width, enhanced_img.height)
+                )
+
+                self.preloaded_patterns[key] = ctk_img
 
     def translate_rgb_cam(self):
         """Translates view from rgb cam"""
@@ -260,6 +295,43 @@ class App(customtkinter.CTk):
         self.flag = False
         external_functions.change_button_state(self, block=False)
 
+    def save_factors_snapshot(self):
+        """
+        Сохраняет текущие factors в отдельный CSV-файл
+        внутри текущей папки измерения (создаётся при каждом запуске SFDI)
+        """
+        if not hasattr(self, 'current_directory') or not self.current_directory:
+            return
+
+        # Время запуска — чтобы имя файла было уникальным
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+        # Имя файла
+        filename = f"factors_{timestamp}.csv"
+        filepath = os.path.join(self.current_directory, filename)
+
+        # Данные
+        g, b, r = self.pattern_factors
+
+        fieldnames = ['parameter', 'value', 'description']
+        rows = [
+            {'parameter': 'timestamp', 'value': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+             'description': 'Time'},
+            {'parameter': 'green_factor', 'value': f"{g:.4f}", 'description': 'Green'},
+            {'parameter': 'blue_factor', 'value': f"{b:.4f}", 'description': 'Blue'},
+            {'parameter': 'red_factor', 'value': f"{r:.4f}", 'description': 'Red'},
+        ]
+
+        try:
+            with open(filepath, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(rows)
+
+            print(f"Factors сохранены - {filepath}")
+        except Exception as e:
+            print(f"Ошибка сохранения factors: {e}")
+
     def begin_sfdi(self):
         """A loop for pattern translation to projector, taking thorcam photos and
         saving them in a relevant directory. Rather large function for now."""
@@ -290,7 +362,13 @@ class App(customtkinter.CTk):
             with I.open(img_name[0]) as im:
 
                 enhancer = ImageEnhance.Brightness(im)
-                img = enhancer.enhance(img_name[1])
+                color_name = key[0]  # 'green', 'blue' или 'red'
+                color_idx = {'green': 0, 'blue': 1, 'red': 2}[color_name]
+
+                # Берём factor из настроек
+                current_factor = self.pattern_factors[color_idx]
+
+                img = enhancer.enhance(current_factor)
             img = customtkinter.CTkImage(img, size=(np.shape(img)[1], np.shape(img)[0]))
 
             self.projection_window.pattern_window['image'] = img
@@ -351,6 +429,77 @@ class App(customtkinter.CTk):
         #self.after(2000)
         external_functions.change_button_state(self, block=False)
         self.after(2000)
+        self.save_factors_snapshot()
+
+    def open_brightness_window(self):
+        """Окошко для настройки factors"""
+        if hasattr(self, 'brightness_win') and self.brightness_win.winfo_exists():
+            self.brightness_win.lift()
+            return
+
+        win = customtkinter.CTkToplevel(self)
+        win.title("Настройка factors")
+        win.geometry("380x420")
+        win.resizable(False, False)
+        self.brightness_win = win
+
+        customtkinter.CTkLabel(
+            win,
+            text="Яркость паттернов (factors)",
+            font=("Arial", 16, "bold")
+        ).pack(pady=15)
+
+        colors = ["green", "blue", "red"]
+        hex_colors = ["#00ff88", "#4488ff", "#ff4444"]
+        self.factor_labels = {}
+
+        for i, (col, hex_col) in enumerate(zip(colors, hex_colors)):
+            frame = customtkinter.CTkFrame(win)
+            frame.pack(pady=8, padx=30, fill="x")
+
+            customtkinter.CTkLabel(
+                frame,
+                text=col.capitalize(),
+                text_color=hex_col,
+                font=("Arial", 14, "bold")
+            ).pack()
+
+            # Текущее значение
+            val_label = customtkinter.CTkLabel(frame, text=f"{self.pattern_factors[i]:.3f}", width=80)
+            val_label.pack(pady=2)
+            self.factor_labels[col] = val_label
+
+            # Ползунок
+            slider = customtkinter.CTkSlider(
+                frame,
+                from_=0,
+                to=1,
+                number_of_steps=100,
+                command=lambda v, idx=i, c=col: self._update_factor_debug(idx, v, c)
+            )
+            slider.set(self.pattern_factors[i])
+            slider.pack(fill="x", padx=20, pady=5)
+
+        customtkinter.CTkButton(
+            win,
+            text="Закрыть",
+            command=win.destroy
+        ).pack(pady=15)
+
+        self._print_factors("Окошко открыто")
+
+    def _update_factor_debug(self, idx, value, color_name):
+        """Обновляет factor и выводит в консоль отладку"""
+        value = round(value, 3)
+        self.pattern_factors[idx] = value
+        self.factor_labels[color_name].configure(text=f"{value:.3f}")
+
+        self._print_factors(f"Изменено: {color_name}")
+
+    def _print_factors(self, event=""):
+        """Печатает текущие factors"""
+        g, b, r = self.pattern_factors
+        print(f"FACTORS {event:20} → Green: {g:.3f} | Blue: {b:.3f} | Red: {r:.3f}")
 
 
 if __name__ == "__main__":

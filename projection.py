@@ -1,4 +1,5 @@
 import customtkinter
+import os
 from PIL import Image as I
 from PIL import ImageEnhance
 from pathlib import Path
@@ -9,44 +10,88 @@ customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "gre
 freqs = ['01', '02', '04', '06', '10',  '14', '18', '26', '34', '40']
 
 
-def  read_patterns_paths(colors=[
- 'green',
- 'blue',
- 'red'
-],
-        freqs=['01',
-               '02',
-               '04',
-               '06',
-               ## '08',
-               '10',
-               #  '12',
-                 '14',
-                '18',
-               # # '22',
-                 '26',
-               # # '32',
-                 '34',
-                # '36',
-                 '40',
-                 #'44',
-               '99'],
-        factors=[0.42, 0.54, 0.5],    # [0.42, 0.54, 0.62]
-        patterns_folder='C:/Users/madpl/Documents/sfdi/projector'):
-    """Reads paths to patterns for translation and saves them into a dictionary"""
+def read_patterns_paths(
+        colors=['green', 'blue', 'red'],
+        freqs=['01', '02', '04', '06', '10', '14', '18', '26', '34', '40', '99'],
+        factors=[0.42, 0.54, 0.5],
+        use_zhang=True):
+    """
+    Reads paths to patterns and saves them into a dictionary.
+    Updated by OK 06.03.2026
+    """
+
+    # use_zhang = True
+
+    if use_zhang:
+        patterns_folder = 'C:/Users/madpl/Documents/sfdi/projector/zhang_2024'
+    else:
+        patterns_folder = 'C:/Users/madpl/Documents/sfdi/projector'
 
     patterns_dict = {}
-    for color, factor in zip(colors[:], factors):
 
-        files = [str(i) for i in list((Path(f'{patterns_folder}/{color}/').glob('*')))]
+    for color, factor in zip(colors, factors):
 
-        for file in files[:]:
-            name = file.split('\\')[-1].split('.')[0]
+        folder = Path(f"{patterns_folder}/{color}/")
 
-            if name.split('_')[0] in freqs:
-                patterns_dict[color, name] = (file, factor)
-            name.split('_')[0]
+        files = [str(i) for i in folder.glob('*')]
+
+        for file in files:
+
+            name = Path(file).stem
+
+            if use_zhang or name.split('_')[0] in freqs:
+                patterns_dict[(color, name)] = (file, factor)
+
     return patterns_dict
+
+"""
+Версия функции до изменений 06.03.2026
+"""
+# def  read_patterns_paths(colors=[
+#  'green',
+#  'blue',
+#  'red'
+# ],
+#         freqs=['01',
+#                '02',
+#                '04',
+#                '06',
+#                ## '08',
+#                '10',
+#                #  '12',
+#                  '14',
+#                 '18',
+#                # # '22',
+#                  '26',
+#                # # '32',
+#                  '34',
+#                 # '36',
+#                  '40',
+#                  #'44',
+#                '99'],
+#         factors=[0.42, 0.54, 0.5],    # [0.42, 0.54, 0.62]
+#         patterns_folder='C:/Users/madpl/Documents/sfdi/projector'):
+#     """Reads paths to patterns for translation and saves them into a dictionary"""
+#
+#     patterns_dict = {}
+#     for color, factor in zip(colors[:], factors):
+#
+#         files = [str(i) for i in list((Path(f'{patterns_folder}/{color}/').glob('*')))]
+#         # print(files)
+#
+#         for file in files[:]:
+#             name = file.split('\\')[-1].split('.')[0]
+#
+#             if name.split('_')[0] in freqs:
+#                 patterns_dict[color, name] = (file, factor)
+#
+#             # name = os.path.basename(file)
+#             # patterns_dict[color, name] = (file, factor)
+#
+#             name.split('_')[0]
+#     return patterns_dict
+
+
 
 
 class Projection(customtkinter.CTkToplevel):

@@ -74,6 +74,17 @@ class Side_Frame(customtkinter.CTkFrame):
 
         self.open_thor_button.grid(row=5, column=0, padx=[20, 20], pady=[50, 0])
 
+        # # Создаем переменную, которая берет начальное значение из main_app
+        # self.zhang_var = customtkinter.BooleanVar(value=parent.use_zhang)
+        #
+        # self.zhang_switch = customtkinter.CTkSwitch(
+        #     self,
+        #     text="Zhang patterns",
+        #     variable=self.zhang_var,  # Привязываем переменную
+        #     command=parent.toggle_zhang
+        # )
+        # self.zhang_switch.grid(row=5, column=0, padx=20, pady=10)
+
 
 class Log_Window(customtkinter.CTkFrame):
     """Window for logging events during measurement"""
@@ -214,6 +225,26 @@ class TabWindow(customtkinter.CTkTabview):
         self.tab("SFDI").grid_columnconfigure(0, weight=1)
         self.sfdi_button.grid(row=1, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
         self.stop_button.grid(row=2, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
+        self.brightness_button = customtkinter.CTkButton(
+            master=self.tab("SFDI"),
+            text="Яркость паттернов",
+            text_color=("gray10", "#DCE4EE"),
+            command=self.parent.open_brightness_window,
+            fg_color="transparent",
+            border_width=1
+        )
+        self.brightness_button.grid(row=3, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
+
+        self.zhang_var = customtkinter.BooleanVar(value=parent.use_zhang)
+
+        self.zhang_switch = customtkinter.CTkSwitch(
+            master=self.tab("SFDI"),  # Обязательно указываем master=self.tab("SFDI")
+            text="Zhang patterns",
+            variable=self.zhang_var,
+            command=self.parent.toggle_zhang
+        )
+        # Ставим его на следующий ряд (row=4)
+        self.zhang_switch.grid(row=4, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
 
     def fill_entry(self):
         """Fills the exposition entry """
