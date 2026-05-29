@@ -23,11 +23,16 @@ ROI_FRACTION = (0.2, 0.75, 0.35, 0.7)  # top, bottom, left, right
 PATTERN_FREQUENCY_TO_SPATIAL_SCALE = 2 * np.pi / 160.0
 REFERENCE_ENV_VAR = "SFDI_REFERENCE_ID"
 REFERENCE_PARAM_FILES = ("reference_params.json", "ref_params.json")
+DEFAULT_COEFFICIENT_UNITS = "cm^-1"
+OUTPUT_COEFFICIENT_UNITS = "cm^-1"
+CM_TO_MM_COEFFICIENT_SCALE = 0.1
+MM_TO_CM_COEFFICIENT_SCALE = 10.0
 
 DEFAULT_REF_MUA = {"green": 0.5, "red": 0.5}
 DEFAULT_REF_MUS_PRIME = {"green": 25.0, "red": 25.0}
 
 _PATTERN_RE = re.compile(r"^(?P<freq>\d+)_(?P<phase>\d+)$")
+_MODEL_CACHE: dict[tuple[str, float], Any] = {}
 
 
 @dataclass(frozen=True)
@@ -220,7 +225,7 @@ def process_realtime_frames(
         _ensure_sfdi_fitter_on_path()
         from sfdi_fitter.data import SFDIStack, StackAxis
         from sfdi_fitter.demodulation import ClassicalDemodulator
-        from sfdi_fitter.fitter import NNMCMLmodel
+        from sfdi_fitter.fitter import MCML_model
         from sfdi_fitter.reflectance import ReflectanceCalculator
         from sfdi_fitter.transformers import MeanSmoother, StackSqueezer
     except Exception as exc:
@@ -248,7 +253,7 @@ def process_realtime_frames(
             return {}, f"unexpected demodulated frequencies: {raw_demod.spatial_frequencies}"
 
         ref_mua, ref_mus_prime, refractive_index = _load_reference_params(reference_dir)
-        model = NNMCMLmodel(multiple_frequencies_strategy="max_freq")
+        model = _get_mcml_model(MCML_model, spatial_frequency)
 
         reflectance = ReflectanceCalculator(
             reference_stack=reference_demod,
@@ -264,7 +269,7 @@ def process_realtime_frames(
         return {}, f"pipeline error: {exc}"
 
     return metrics, (
-        f"reference {reference_dir.name}, pattern freq {frequency}, "
+        f"reference {reference_dir.name}, model MCML, pattern freq {frequency}, "
         f"spatial freq {spatial_frequency:.4f}, {fit_diagnostics}"
     )
 
@@ -373,6 +378,13 @@ def _build_stack(sfdi_stack_cls: Any, stack_axis_cls: Any, frame_map: Mapping[tu
 
 def _pattern_frequency_to_spatial(frequency: int) -> float:
     return float(frequency) * PATTERN_FREQUENCY_TO_SPATIAL_SCALE
+
+
+def _get_mcml_model(model_cls: Any, spatial_frequency: float) -> Any:
+    cache_key = ("MCML", round(float(spatial_frequency), 6))
+    if cache_key not in _MODEL_CACHE:
+        _MODEL_CACHE[cache_key] = model_cls(spatial_frequencies=[0, spatial_frequency])
+    return _MODEL_CACHE[cache_key]
 
 
 def _apply_roi(data: np.ndarray, roi_fraction: tuple[float, float, float, float]) -> np.ndarray:
@@ -491,10 +503,41 @@ def _load_reference_params(reference_dir: Path) -> tuple[dict[str, float], dict[
                 params = json.load(f)
             break
 
-    ref_mua = _coerce_color_params(params.get("ref_mua"), DEFAULT_REF_MUA)
-    ref_mus_prime = _coerce_color_params(params.get("ref_mus_prime"), DEFAULT_REF_MUS_PRIME)
+    coefficient_units = params.get("coefficient_units", DEFAULT_COEFFICIENT_UNITS)
+    input_to_model_scale = _coefficient_scale_to_model(coefficient_units)
+
+    ref_mua = _scale_color_params(
+        _coerce_color_params(params.get("ref_mua"), DEFAULT_REF_MUA),
+        input_to_model_scale,
+    )
+    ref_mus_prime = _scale_color_params(
+        _coerce_color_params(params.get("ref_mus_prime"), DEFAULT_REF_MUS_PRIME),
+        input_to_model_scale,
+    )
     refractive_index = float(params.get("refractive_index", 1.37))
     return ref_mua, ref_mus_prime, refractive_index
+
+
+def _coefficient_scale_to_model(units: str) -> float:
+    normalized_units = str(units).lower().replace(" ", "")
+    if normalized_units in {"cm^-1", "cm-1", "1/cm"}:
+        return CM_TO_MM_COEFFICIENT_SCALE
+    if normalized_units in {"mm^-1", "mm-1", "1/mm"}:
+        return 1.0
+    raise ValueError(f"Unsupported coefficient_units: {units}")
+
+
+def _coefficient_scale_from_model(units: str) -> float:
+    normalized_units = str(units).lower().replace(" ", "")
+    if normalized_units in {"cm^-1", "cm-1", "1/cm"}:
+        return MM_TO_CM_COEFFICIENT_SCALE
+    if normalized_units in {"mm^-1", "mm-1", "1/mm"}:
+        return 1.0
+    raise ValueError(f"Unsupported output coefficient units: {units}")
+
+
+def _scale_color_params(params: dict[str, float], scale: float) -> dict[str, float]:
+    return {color: float(value) * scale for color, value in params.items()}
 
 
 def _coerce_color_params(value: Any, default: dict[str, float]) -> dict[str, float]:
@@ -519,6 +562,7 @@ def _coerce_color_params(value: Any, default: dict[str, float]) -> dict[str, flo
 def _fit_reflectance_metrics(reflectance_stack: Any, model: Any) -> tuple[dict[str, dict[str, float]], str]:
     metrics: dict[str, dict[str, float]] = {}
     diagnostics: list[str] = []
+    output_scale = _coefficient_scale_from_model(OUTPUT_COEFFICIENT_UNITS)
 
     for color_index, color in enumerate(reflectance_stack.wavelengths or SFDI_COLORS):
         reflectance_data = reflectance_stack.data[color_index]
@@ -542,7 +586,8 @@ def _fit_reflectance_metrics(reflectance_stack: Any, model: Any) -> tuple[dict[s
             if output_name not in fitted_data:
                 continue
 
-            values = fitted_data[output_name].astype(float)
+            values = fitted_data[output_name].astype(float) * output_scale
+            values[~fit_mask] = np.nan
             values[values <= 0] = np.nan
             finite_values = values[np.isfinite(values)]
             if finite_values.size:
@@ -555,7 +600,7 @@ def _fit_reflectance_metrics(reflectance_stack: Any, model: Any) -> tuple[dict[s
         color: sorted(color_metrics.keys())
         for color, color_metrics in metrics.items()
     }
-    diagnostics.append(f"metrics {metric_keys}")
+    diagnostics.append(f"metrics {metric_keys}, units {OUTPUT_COEFFICIENT_UNITS}")
     return metrics, "; ".join(diagnostics)
 
 
