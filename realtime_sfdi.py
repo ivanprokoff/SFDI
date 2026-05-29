@@ -157,12 +157,14 @@ def run_realtime_sfdi_cycle(app: Any) -> RealtimeSFDIResult:
                 _log(app, result.message)
                 continue
 
-            cropped_array, cropped_image = _crop_frame(raw_img, CAPTURE_CROP)
-            frame_map[(pattern.color, pattern.phase)] = cropped_array
+            cropped_array, _ = _crop_frame(raw_img, CAPTURE_CROP)
+            roi_array = _apply_roi(cropped_array, ROI_FRACTION)
+            roi_image = PILImage.fromarray(roi_array)
+            frame_map[(pattern.color, pattern.phase)] = roi_array
 
             file_path = Path(app.current_directory) / pattern.color / f"{pattern.save_name}.TIF"
             file_path.parent.mkdir(parents=True, exist_ok=True)
-            cropped_image.save(file_path)
+            roi_image.save(file_path)
             result.saved_files.append(file_path)
 
             _show_thor_preview(app, raw_img)
@@ -305,7 +307,7 @@ def _show_thor_preview(app: Any, raw_img: np.ndarray) -> None:
     preview_image = PILImage.fromarray(preview).transpose(PILImage.FLIP_LEFT_RIGHT)
 
     draw = ImageDraw.Draw(preview_image)
-    draw.rectangle(((570 // 2, 570 // 2), (510 // 2, 490 // 2)), fill=None, outline=255)
+    draw.rectangle(_roi_rect_on_preview(raw_img), fill=None, outline=255)
 
     tk_image = customtkinter.CTkImage(
         preview_image,
@@ -355,8 +357,6 @@ def _build_stack(sfdi_stack_cls: Any, stack_axis_cls: Any, frame_map: Mapping[tu
 
     data = np.clip(data, 0, RAW_CAMERA_MAX) / RAW_CAMERA_MAX
     data = data[:, np.newaxis, :, :, :]
-    data = _apply_roi(data, ROI_FRACTION)
-
     return sfdi_stack_cls(
         data=data,
         axis_names=[
@@ -389,6 +389,39 @@ def _apply_roi(data: np.ndarray, roi_fraction: tuple[float, float, float, float]
     left = max(0, min(left, width - 1))
     right = max(left + 1, min(right, width))
     return data[..., top:bottom, left:right]
+
+
+def _roi_shape() -> tuple[int, int]:
+    crop_upper, crop_lower, crop_left, crop_right = CAPTURE_CROP
+    crop_h = crop_lower - crop_upper
+    crop_w = crop_right - crop_left
+    top_f, bottom_f, left_f, right_f = ROI_FRACTION
+    h = int(round(crop_h * bottom_f)) - int(round(crop_h * top_f))
+    w = int(round(crop_w * right_f)) - int(round(crop_w * left_f))
+    return h, w
+
+
+def _roi_rect_on_preview(raw_img: np.ndarray) -> tuple[tuple[int, int], tuple[int, int]]:
+    """Rectangle coordinates (x0,y0),(x1,y1) for the ROI in the preview image space."""
+    raw_h = raw_img.shape[0]
+    crop_upper, crop_lower, crop_left, crop_right = CAPTURE_CROP
+    crop_h = crop_lower - crop_upper
+    crop_w = crop_right - crop_left
+    top_f, bottom_f, left_f, right_f = ROI_FRACTION
+
+    r0 = crop_upper + int(round(crop_h * top_f))
+    r1 = crop_upper + int(round(crop_h * bottom_f))
+    c0 = crop_left + int(round(crop_w * left_f))
+    c1 = crop_left + int(round(crop_w * right_f))
+
+    # Preview: raw_img.T[::2,::2] → PIL image → FLIP_LEFT_RIGHT
+    # PIL pixel (px, py) maps to raw_img[raw_h - 2 - 2*px, 2*py]
+    preview_w = raw_h // 2
+    x0 = preview_w - 1 - r1 // 2
+    x1 = preview_w - 1 - r0 // 2
+    y0 = c0 // 2
+    y1 = c1 // 2
+    return (x0, y0), (x1, y1)
 
 
 def _find_reference_directory(measurement_dir: Path, frequency: int) -> tuple[Path | None, Path]:
@@ -429,7 +462,10 @@ def _load_reference_frame_map(reference_dir: Path, frequency: int) -> dict[tuple
         for phase in SFDI_PHASES:
             frame_path = reference_dir / color / f"{frequency}_{phase}.TIF"
             with PILImage.open(frame_path) as image:
-                frame_map[(color, phase)] = np.asarray(image)
+                arr = np.asarray(image)
+            if arr.shape[:2] != _roi_shape():
+                arr = _apply_roi(arr, ROI_FRACTION)
+            frame_map[(color, phase)] = arr
     return frame_map
 
 
