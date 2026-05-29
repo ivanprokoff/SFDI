@@ -19,13 +19,13 @@ SFDI_COLORS = ("green", "red")
 SFDI_PHASES = tuple(range(6))
 RAW_CAMERA_MAX = 1023.0
 CAPTURE_CROP = (100, 900, 0, 800)  # upper, lower, left, right
-ROI_FRACTION = (0.25, 0.75, 0.25, 0.75)  # top, bottom, left, right
+ROI_FRACTION = (0.2, 0.75, 0.35, 0.7)  # top, bottom, left, right
 PATTERN_FREQUENCY_TO_SPATIAL_SCALE = 2 * np.pi / 160.0
 REFERENCE_ENV_VAR = "SFDI_REFERENCE_ID"
 REFERENCE_PARAM_FILES = ("reference_params.json", "ref_params.json")
 
-DEFAULT_REF_MUA = {"green": 1.0, "red": 1.0}
-DEFAULT_REF_MUS_PRIME = {"green": 10.0, "red": 10.0}
+DEFAULT_REF_MUA = {"green": 0.5, "red": 0.5}
+DEFAULT_REF_MUS_PRIME = {"green": 25.0, "red": 25.0}
 
 _PATTERN_RE = re.compile(r"^(?P<freq>\d+)_(?P<phase>\d+)$")
 
@@ -221,7 +221,7 @@ def process_realtime_frames(
         from sfdi_fitter.data import SFDIStack, StackAxis
         from sfdi_fitter.demodulation import ClassicalDemodulator
         from sfdi_fitter.fitter import NNMCMLmodel
-        from sfdi_fitter.reflectance import ReflectanceCalculator, ReflectanceFitter
+        from sfdi_fitter.reflectance import ReflectanceCalculator
         from sfdi_fitter.transformers import MeanSmoother, StackSqueezer
     except Exception as exc:
         return {}, f"pipeline dependencies unavailable: {exc}"
@@ -229,7 +229,8 @@ def process_realtime_frames(
     try:
         spatial_frequency = _pattern_frequency_to_spatial(frequency)
         raw_stack = _build_stack(SFDIStack, StackAxis, frame_map, spatial_frequency)
-        reference_map = _load_reference_frame_map(reference_dir, frequency)
+        expected_frame_shape = _first_frame_shape(frame_map)
+        reference_map = _load_reference_frame_map(reference_dir, frequency, expected_frame_shape)
         reference_stack = _build_stack(SFDIStack, StackAxis, reference_map, spatial_frequency)
     except Exception as exc:
         return {}, f"reference/raw stack error: {exc}"
@@ -257,16 +258,15 @@ def process_realtime_frames(
             refractive_index=refractive_index,
         ).process(raw_demod)
 
-        fit_mask = np.isfinite(reflectance.data).all(axis=(0, 1))
-        fit_mask &= (reflectance.data > 0).all(axis=(0, 1))
-
-        fit_result = ReflectanceFitter(model).process(reflectance, fit_mask=fit_mask)
-        metrics = _aggregate_fit_result(fit_result)
+        metrics, fit_diagnostics = _fit_reflectance_metrics(reflectance, model)
 
     except Exception as exc:
         return {}, f"pipeline error: {exc}"
 
-    return metrics, f"reference {reference_dir.name}, pattern freq {frequency}, spatial freq {spatial_frequency:.4f}"
+    return metrics, (
+        f"reference {reference_dir.name}, pattern freq {frequency}, "
+        f"spatial freq {spatial_frequency:.4f}, {fit_diagnostics}"
+    )
 
 
 def _prepare_measurement_directory(app: Any, sequence: list[RealtimePattern]) -> None:
@@ -456,15 +456,28 @@ def _has_reference_frames(reference_dir: Path, frequency: int) -> bool:
     )
 
 
-def _load_reference_frame_map(reference_dir: Path, frequency: int) -> dict[tuple[str, int], np.ndarray]:
+def _first_frame_shape(frame_map: Mapping[tuple[str, int], np.ndarray]) -> tuple[int, int]:
+    first_frame = next(iter(frame_map.values()))
+    return first_frame.shape[:2]
+
+
+def _load_reference_frame_map(
+    reference_dir: Path,
+    frequency: int,
+    expected_shape: tuple[int, int],
+) -> dict[tuple[str, int], np.ndarray]:
     frame_map: dict[tuple[str, int], np.ndarray] = {}
     for color in SFDI_COLORS:
         for phase in SFDI_PHASES:
             frame_path = reference_dir / color / f"{frequency}_{phase}.TIF"
             with PILImage.open(frame_path) as image:
                 arr = np.asarray(image)
-            if arr.shape[:2] != _roi_shape():
-                arr = _apply_roi(arr, ROI_FRACTION)
+
+            if arr.shape[:2] != expected_shape:
+                roi_arr = _apply_roi(arr, ROI_FRACTION)
+                if roi_arr.shape[:2] == expected_shape:
+                    arr = roi_arr
+
             frame_map[(color, phase)] = arr
     return frame_map
 
@@ -485,39 +498,65 @@ def _load_reference_params(reference_dir: Path) -> tuple[dict[str, float], dict[
 
 
 def _coerce_color_params(value: Any, default: dict[str, float]) -> dict[str, float]:
+    if value is None:
+        value = default
+
     if isinstance(value, Mapping):
-        result = default.copy()
+        if isinstance(default, Mapping):
+            result = {color: float(default[color]) for color in SFDI_COLORS if color in default}
+        else:
+            result = {color: float(default) for color in SFDI_COLORS}
+
         for color in SFDI_COLORS:
             if color in value:
                 result[color] = float(value[color])
         return result
 
-    if value is not None:
-        scalar = float(value)
-        return {color: scalar for color in SFDI_COLORS}
-
-    return default.copy()
+    scalar = float(value)
+    return {color: scalar for color in SFDI_COLORS}
 
 
-def _aggregate_fit_result(fit_result: Any) -> dict[str, dict[str, float]]:
+def _fit_reflectance_metrics(reflectance_stack: Any, model: Any) -> tuple[dict[str, dict[str, float]], str]:
     metrics: dict[str, dict[str, float]] = {}
-    parameter_names = list(fit_result.parameter_names or [])
+    diagnostics: list[str] = []
 
-    for color_index, color in enumerate(SFDI_COLORS):
+    for color_index, color in enumerate(reflectance_stack.wavelengths or SFDI_COLORS):
+        reflectance_data = reflectance_stack.data[color_index]
+        fit_mask = np.isfinite(reflectance_data).all(axis=0)
+        fit_mask &= (reflectance_data > 0).all(axis=0)
+
+        valid_pixels = int(fit_mask.sum())
+        diagnostics.append(f"{color}: {valid_pixels} fit px")
+
+        if valid_pixels == 0:
+            continue
+
+        fitted_data = model.fit(
+            reflectance_stack.spatial_frequencies,
+            reflectance_data,
+            fit_mask=fit_mask,
+        )
+
         color_metrics: dict[str, float] = {}
-        for output_name, parameter_name in (("mua", "mua"), ("mus", "mus")):
-            if parameter_name not in parameter_names:
+        for output_name in ("mua", "mus"):
+            if output_name not in fitted_data:
                 continue
-            parameter_index = parameter_names.index(parameter_name)
-            values = fit_result.data[color_index, parameter_index].astype(float)
+
+            values = fitted_data[output_name].astype(float)
             values[values <= 0] = np.nan
             finite_values = values[np.isfinite(values)]
             if finite_values.size:
                 color_metrics[output_name] = float(np.nanmedian(finite_values))
+
         if color_metrics:
             metrics[color] = color_metrics
 
-    return metrics
+    metric_keys = {
+        color: sorted(color_metrics.keys())
+        for color, color_metrics in metrics.items()
+    }
+    diagnostics.append(f"metrics {metric_keys}")
+    return metrics, "; ".join(diagnostics)
 
 
 def _ensure_sfdi_fitter_on_path() -> None:
