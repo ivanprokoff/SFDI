@@ -12,8 +12,7 @@ def create_today_directory(main_path='C:/Users/madpl/clinic_data'):
 
     for mode in ['SFDI', 'Photo', 'Infrared', 'Logs']:
         date_path = f'{main_path}/{mode}/{date}'
-        if not os.path.exists(date_path):
-            os.mkdir(date_path)
+        os.makedirs(date_path, exist_ok=True)
 
     log_path = f'{main_path}/Logs/{date}/{date}_log.txt'
 
@@ -22,21 +21,21 @@ def create_today_directory(main_path='C:/Users/madpl/clinic_data'):
             f.write('')
 
 
-def create_patient_directory(patient_id, modes=['SFDI', 'Infrared', 'photo'], main_path='C:/Users/madpl/clinic_data'):
+def create_patient_directory(patient_id, modes=['SFDI', 'Infrared', 'Photo'], main_path='C:/Users/madpl/clinic_data'):
     """Creates directories for the current patient/phantom"""
     date = str(datetime.date(datetime.now()))
 
     for method in modes:
         folder_id = f'{main_path}/{method}/{date}/{patient_id}'
 
-        if patient_id and not os.path.exists(folder_id):
-            os.mkdir(folder_id)
+        if patient_id:
+            os.makedirs(folder_id, exist_ok=True)
 
+        if patient_id and method == 'SFDI':
             for color in ['red', 'green', 'blue']:
 
                 folder_name = f'{main_path}/SFDI/{date}/{patient_id}/{color}'
-                if not os.path.exists(folder_name):
-                    os.mkdir(folder_name)
+                os.makedirs(folder_name, exist_ok=True)
 
 
 def return_current_directory(patient_id, mode='SFDI', main_path='C:/Users/madpl/clinic_data'):

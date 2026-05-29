@@ -1,0 +1,2 @@
+# Optional Thorlabs camera dependency. Install on the acquisition workstation.
+pylablib

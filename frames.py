@@ -105,6 +105,9 @@ class Log_Window(customtkinter.CTkFrame):
 
         if command == 'SFDI':
             line = f'{current_time}     {self.parent.patient_entry.get()} SFDI measured'
+        elif command == 'SFDIStatus':
+            message = args[0] if args else ''
+            line = f'{current_time}      {self.parent.patient_entry.get()} {message}'
         elif command == 'Infrared':
             line = f'{current_time}      {args}'
         elif command == 'RGB':
@@ -116,6 +119,8 @@ class Log_Window(customtkinter.CTkFrame):
             line = f'{current_time}      {self.parent.patient_entry.get()} {args}'
         elif command == 'Exception':
             line = f'{current_time}      ThorCam is closed'
+        else:
+            line = f'{current_time}      {args}'
 
         self.parent.text_box.insert('0.0', line + '\n')
 
@@ -225,6 +230,14 @@ class TabWindow(customtkinter.CTkTabview):
         self.tab("SFDI").grid_columnconfigure(0, weight=1)
         self.sfdi_button.grid(row=1, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
         self.stop_button.grid(row=2, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
+
+        self.sfdi_reset_button = customtkinter.CTkButton(master=self.tab("SFDI"), fg_color="transparent",
+                                                         text_color=("gray10", "#DCE4EE"), text='Reset',
+                                                         command=lambda *arg: [
+                                                             parent.reset_sfdi_plots()],
+                                                         border_width=1)
+        self.sfdi_reset_button.grid(row=3, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
+
         self.brightness_button = customtkinter.CTkButton(
             master=self.tab("SFDI"),
             text="Яркость паттернов",
@@ -233,7 +246,7 @@ class TabWindow(customtkinter.CTkTabview):
             fg_color="transparent",
             border_width=1
         )
-        self.brightness_button.grid(row=3, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
+        self.brightness_button.grid(row=4, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
 
         self.zhang_var = customtkinter.BooleanVar(value=parent.use_zhang)
 
@@ -243,8 +256,8 @@ class TabWindow(customtkinter.CTkTabview):
             variable=self.zhang_var,
             command=self.parent.toggle_zhang
         )
-        # Ставим его на следующий ряд (row=4)
-        self.zhang_switch.grid(row=4, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
+        # Ставим его на следующий ряд
+        self.zhang_switch.grid(row=5, column=0, padx=(20, 20), pady=(10, 10), sticky="nsew")
 
     def fill_entry(self):
         """Fills the exposition entry """

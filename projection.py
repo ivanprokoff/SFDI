@@ -33,7 +33,7 @@ def read_patterns_paths(
 
         folder = Path(f"{patterns_folder}/{color}/")
 
-        files = [str(i) for i in folder.glob('*')]
+        files = [str(i) for i in sorted(folder.glob('*'), key=lambda path: path.stem)]
 
         for file in files:
 

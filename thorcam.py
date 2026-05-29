@@ -1,8 +1,3 @@
-import pylablib as pll
-from pylablib.devices import Thorlabs
-pll.par["devices/dlls/thorlabs_tlcam"] = "path/to/dlls"
-
-
 class Thorcam():
     """Class for dealing with Thorlabs camera: opening, closing, taking images"""
     def __init__(self, parent):
@@ -13,6 +8,11 @@ class Thorcam():
 
     def open_camera(self):
         """Initiates the camera"""
+        import pylablib as pll
+        from pylablib.devices import Thorlabs
+
+        pll.par["devices/dlls/thorlabs_tlcam"] = "path/to/dlls"
+
         self.release_camera()
         self.open = True
 
@@ -48,4 +48,3 @@ class Thorcam():
         """Stops camera acquisition"""
         if self.cam:
             self.cam.stop_acquisition()
-

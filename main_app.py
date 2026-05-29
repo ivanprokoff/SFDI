@@ -15,6 +15,14 @@ import csv
 from datetime import datetime
 import os
 import time
+from realtime_sfdi import run_realtime_sfdi_cycle
+
+try:
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+    from matplotlib.figure import Figure
+except ImportError:
+    FigureCanvasTkAgg = None
+    Figure = None
 
 customtkinter.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -74,7 +82,7 @@ class App(customtkinter.CTk):
 
         self.exposure = 66.68 / 1000  # МЕНЯЛИ ДЛЯ УСТРАННЕНИЯ РАССИНХРОНА
         self.pattern_factors = [0.42, 0.54, 0.62]
-        self.geometry('%dx%d+%d+%d' % (1520, 700, 0, 0))
+        self.geometry('%dx%d+%d+%d' % (1520, 900, 0, 0))
 
         self.camera = Camera(self)
         self.thor_camera = Thorcam(self)
@@ -99,6 +107,12 @@ class App(customtkinter.CTk):
         self.log_frame = Log_Window(self, container)
         self.text_box = self.log_frame.textbox
         self.log_frame.grid(row=0, column=0)
+
+        self.sfdi_plot_history = {
+            'green': {'mua': [], 'mus': []},
+            'red': {'mua': [], 'mus': []},
+        }
+        self._setup_sfdi_plots()
 
         """
         Frame window for camera translation
@@ -295,6 +309,87 @@ class App(customtkinter.CTk):
         self.flag = False
         external_functions.change_button_state(self, block=False)
 
+    def _setup_sfdi_plots(self):
+        """Creates the 2x2 realtime SFDI graph panel."""
+        container = customtkinter.CTkFrame(self, width=400, height=320, corner_radius=0)
+        container.grid(row=2, column=2, rowspan=1, columnspan=1, pady=[10, 10], padx=20, sticky='nswe')
+        self.sfdi_plot_container = container
+
+        if Figure is None or FigureCanvasTkAgg is None:
+            customtkinter.CTkLabel(
+                container,
+                text='Matplotlib is unavailable',
+                width=400,
+                height=320,
+            ).grid(row=0, column=0, sticky='nsew')
+            self.sfdi_canvas = None
+            self.sfdi_axes = {}
+            return
+
+        self.sfdi_figure = Figure(figsize=(4.8, 3.2), dpi=100, facecolor='#242424')
+        axes = self.sfdi_figure.subplots(2, 2)
+        self.sfdi_axes = {
+            ('green', 'mua'): axes[0][0],
+            ('green', 'mus'): axes[0][1],
+            ('red', 'mua'): axes[1][0],
+            ('red', 'mus'): axes[1][1],
+        }
+        self.sfdi_figure.tight_layout(pad=1.3)
+
+        self.sfdi_canvas = FigureCanvasTkAgg(self.sfdi_figure, master=container)
+        self.sfdi_canvas.get_tk_widget().grid(row=0, column=0, sticky='nsew')
+        self._redraw_sfdi_plots()
+
+    def reset_sfdi_plots(self):
+        """Clears realtime SFDI graph history."""
+        for color in self.sfdi_plot_history:
+            for parameter in self.sfdi_plot_history[color]:
+                self.sfdi_plot_history[color][parameter].clear()
+        self._redraw_sfdi_plots()
+
+    def update_sfdi_plots(self, metrics):
+        """Appends one realtime SFDI result to the graph history."""
+        for color in ['green', 'red']:
+            for parameter in ['mua', 'mus']:
+                value = metrics.get(color, {}).get(parameter)
+                if value is not None:
+                    self.sfdi_plot_history[color][parameter].append(value)
+        self._redraw_sfdi_plots()
+
+    def _redraw_sfdi_plots(self):
+        if not getattr(self, 'sfdi_canvas', None):
+            return
+
+        titles = {
+            ('green', 'mua'): 'green mu_a',
+            ('green', 'mus'): "green mu_s'",
+            ('red', 'mua'): 'red mu_a',
+            ('red', 'mus'): "red mu_s'",
+        }
+        colors = {'green': '#45c46a', 'red': '#e55757'}
+
+        for key, axis in self.sfdi_axes.items():
+            color, parameter = key
+            values = self.sfdi_plot_history[color][parameter]
+            axis.clear()
+            axis.set_facecolor('#1f1f1f')
+            axis.set_title(titles[key], color='#f0f0f0', fontsize=9)
+            axis.tick_params(colors='#d0d0d0', labelsize=7)
+            axis.grid(True, color='#3a3a3a', linewidth=0.5)
+            for spine in axis.spines.values():
+                spine.set_color('#5a5a5a')
+
+            if values:
+                x = list(range(1, len(values) + 1))
+                axis.plot(x, values, color=colors[color], linewidth=1.4)
+                axis.scatter(x, values, color=colors[color], s=14)
+                axis.set_xlim(0.8, len(values) + 0.2)
+            else:
+                axis.set_xlim(0.8, 1.2)
+
+        self.sfdi_figure.tight_layout(pad=1.3)
+        self.sfdi_canvas.draw_idle()
+
     def save_factors_snapshot(self):
         """
         Сохраняет текущие factors в отдельный CSV-файл
@@ -333,6 +428,10 @@ class App(customtkinter.CTk):
             print(f"Ошибка сохранения factors: {e}")
 
     def begin_sfdi(self):
+        """Runs one short realtime SFDI cycle."""
+        return run_realtime_sfdi_cycle(self)
+
+    def begin_full_sfdi(self):
         """A loop for pattern translation to projector, taking thorcam photos and
         saving them in a relevant directory. Rather large function for now."""
         blue_flag = True
