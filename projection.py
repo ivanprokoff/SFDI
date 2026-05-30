@@ -14,7 +14,7 @@ def read_patterns_paths(
         colors=['green', 'blue', 'red'],
         freqs=['01', '02', '04', '06', '10', '14', '18', '26', '34', '40', '99'],
         factors=[0.42, 0.54, 0.5],
-        use_zhang=True):
+        use_zhang=False):
     """
     Reads paths to patterns and saves them into a dictionary.
     Updated by OK 06.03.2026

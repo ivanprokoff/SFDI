@@ -23,13 +23,18 @@ ROI_FRACTION = (0.2, 0.75, 0.35, 0.7)  # top, bottom, left, right
 PATTERN_FREQUENCY_TO_SPATIAL_SCALE = 2 * np.pi / 160.0
 REFERENCE_ENV_VAR = "SFDI_REFERENCE_ID"
 REFERENCE_PARAM_FILES = ("reference_params.json", "ref_params.json")
-DEFAULT_COEFFICIENT_UNITS = "cm^-1"
-OUTPUT_COEFFICIENT_UNITS = "cm^-1"
+DEFAULT_COEFFICIENT_UNITS = "mm^-1"
+OUTPUT_COEFFICIENT_UNITS = "mm^-1"
 CM_TO_MM_COEFFICIENT_SCALE = 0.1
 MM_TO_CM_COEFFICIENT_SCALE = 10.0
 
-DEFAULT_REF_MUA = {"green": 0.5, "red": 0.5}
-DEFAULT_REF_MUS_PRIME = {"green": 25.0, "red": 25.0}
+DEFAULT_REF_MUA = {"green": 0.0458847464092525, "red": 0.04507811961917679}
+DEFAULT_REF_MUS_PRIME = {"green": 2.773955679472813, "red": 1.8131597898818184}
+REFERENCE_PARAM_ALIASES = {
+    "green": ("green", "525"),
+    "red": ("red", "635"),
+}
+MODEL_MUS_PRIME_RANGE = (0.50119, 10.0)
 
 _PATTERN_RE = re.compile(r"^(?P<freq>\d+)_(?P<phase>\d+)$")
 _MODEL_CACHE: dict[tuple[str, float], Any] = {}
@@ -226,8 +231,8 @@ def process_realtime_frames(
         from sfdi_fitter.data import SFDIStack, StackAxis
         from sfdi_fitter.demodulation import ClassicalDemodulator
         from sfdi_fitter.fitter import MCML_model
-        from sfdi_fitter.reflectance import ReflectanceCalculator
-        from sfdi_fitter.transformers import MeanSmoother, StackSqueezer
+        from sfdi_fitter.reflectance import ReflectanceCalculator, ReflectanceFitter
+        from sfdi_fitter.transformers import Clipper, MeanSmoother, StackSqueezer
     except Exception as exc:
         return {}, f"pipeline dependencies unavailable: {exc}"
 
@@ -262,8 +267,10 @@ def process_realtime_frames(
             ref_mus_prime=ref_mus_prime,
             refractive_index=refractive_index,
         ).process(raw_demod)
+        reflectance = Clipper(clip_min=0, clip_max=10).process(reflectance)
 
-        metrics, fit_diagnostics = _fit_reflectance_metrics(reflectance, model)
+        fitted_stack = ReflectanceFitter(reflectance_model=model).process(reflectance)
+        metrics, fit_diagnostics = _aggregate_fit_metrics(fitted_stack)
 
     except Exception as exc:
         return {}, f"pipeline error: {exc}"
@@ -312,7 +319,7 @@ def _show_thor_preview(app: Any, raw_img: np.ndarray) -> None:
     preview_image = PILImage.fromarray(preview).transpose(PILImage.FLIP_LEFT_RIGHT)
 
     draw = ImageDraw.Draw(preview_image)
-    draw.rectangle(_roi_rect_on_preview(raw_img), fill=None, outline=255)
+    draw.rectangle(roi_rect_on_preview(raw_img), fill=None, outline=255)
 
     tk_image = customtkinter.CTkImage(
         preview_image,
@@ -413,7 +420,7 @@ def _roi_shape() -> tuple[int, int]:
     return h, w
 
 
-def _roi_rect_on_preview(raw_img: np.ndarray) -> tuple[tuple[int, int], tuple[int, int]]:
+def roi_rect_on_preview(raw_img: np.ndarray) -> tuple[tuple[int, int], tuple[int, int]]:
     """Rectangle coordinates (x0,y0),(x1,y1) for the ROI in the preview image space."""
     raw_h = raw_img.shape[0]
     crop_upper, crop_lower, crop_left, crop_right = CAPTURE_CROP
@@ -551,47 +558,40 @@ def _coerce_color_params(value: Any, default: dict[str, float]) -> dict[str, flo
             result = {color: float(default) for color in SFDI_COLORS}
 
         for color in SFDI_COLORS:
-            if color in value:
-                result[color] = float(value[color])
+            for key in REFERENCE_PARAM_ALIASES.get(color, (color,)):
+                if key in value:
+                    result[color] = float(value[key])
+                    break
         return result
 
     scalar = float(value)
     return {color: scalar for color in SFDI_COLORS}
 
 
-def _fit_reflectance_metrics(reflectance_stack: Any, model: Any) -> tuple[dict[str, dict[str, float]], str]:
+def _aggregate_fit_metrics(fitted_stack: Any) -> tuple[dict[str, dict[str, float]], str]:
     metrics: dict[str, dict[str, float]] = {}
     diagnostics: list[str] = []
     output_scale = _coefficient_scale_from_model(OUTPUT_COEFFICIENT_UNITS)
+    result_names = list(fitted_stack.parameter_names or ("mua", "mus"))
 
-    for color_index, color in enumerate(reflectance_stack.wavelengths or SFDI_COLORS):
-        reflectance_data = reflectance_stack.data[color_index]
-        fit_mask = np.isfinite(reflectance_data).all(axis=0)
-        fit_mask &= (reflectance_data > 0).all(axis=0)
-
-        valid_pixels = int(fit_mask.sum())
-        diagnostics.append(f"{color}: {valid_pixels} fit px")
-
-        if valid_pixels == 0:
-            continue
-
-        fitted_data = model.fit(
-            reflectance_stack.spatial_frequencies,
-            reflectance_data,
-            fit_mask=fit_mask,
-        )
-
+    for color_index, color in enumerate(fitted_stack.wavelengths or SFDI_COLORS):
         color_metrics: dict[str, float] = {}
-        for output_name in ("mua", "mus"):
-            if output_name not in fitted_data:
-                continue
 
-            values = fitted_data[output_name].astype(float) * output_scale
-            values[~fit_mask] = np.nan
+        for result_index, output_name in enumerate(result_names):
+            values = fitted_stack.data[color_index, result_index].astype(float) * output_scale
             values[values <= 0] = np.nan
             finite_values = values[np.isfinite(values)]
+
+            diagnostics.append(f"{color} {output_name}: {finite_values.size} finite px")
             if finite_values.size:
                 color_metrics[output_name] = float(np.nanmedian(finite_values))
+                if output_name == "mus":
+                    upper_bound = MODEL_MUS_PRIME_RANGE[1] * output_scale
+                    saturated = np.isclose(finite_values, upper_bound, rtol=1e-4, atol=1e-6)
+                    if saturated.any():
+                        diagnostics.append(
+                            f"{color} mus upper-bound {100 * saturated.mean():.1f}%"
+                        )
 
         if color_metrics:
             metrics[color] = color_metrics

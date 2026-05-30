@@ -15,7 +15,7 @@ import csv
 from datetime import datetime
 import os
 import time
-from realtime_sfdi import run_realtime_sfdi_cycle
+from realtime_sfdi import roi_rect_on_preview, run_realtime_sfdi_cycle
 
 try:
     from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -68,7 +68,7 @@ class App(customtkinter.CTk):
 
         # Added: use_zhang
         #Changed: patterns read
-        self.use_zhang = True
+        self.use_zhang = False
         self.patterns = read_patterns_paths(use_zhang=self.use_zhang)
 
         self.iter_patterns = iter(self.patterns)
@@ -249,41 +249,13 @@ class App(customtkinter.CTk):
         """Translates thorcam view"""
         self.flag = True
         while self.flag and self.thor_camera.cam is not None and self.thor_camera.open:
-            raw_img = self.thor_camera.get_frame()
-            if raw_img is not None:
-                raw_img = (raw_img.astype('float')[::2, ::2].T * 255 // 1023).astype('uint8')
-
+            raw_frame = self.thor_camera.get_frame()
+            if raw_frame is not None:
+                raw_img = (raw_frame.T.astype('float')[::2, ::2] * 255 // 1023).astype('uint8')
                 thor_img = I.fromarray(raw_img).transpose(I.FLIP_LEFT_RIGHT)
 
-                # draw = ImageDraw.Draw(thor_img)
-                # draw.rectangle(((625 // 2, 1080 // 2), (380 // 2, 850 // 2)), fill=None, outline=255)
-                #
-                # draw = ImageDraw.Draw(thor_img)
-                # draw.rectangle(((570 // 2, 570 // 2), (510 // 2, 490 // 2)), fill=None, outline=255)
-
                 draw = ImageDraw.Draw(thor_img)
-                draw.rectangle(((230, 250), (270, 290)), fill=None, outline=255)
-
-                draw = ImageDraw.Draw(thor_img)
-                draw.rectangle(((320, 250), (360, 290)), fill=None, outline=255)
-
-                draw = ImageDraw.Draw(thor_img)
-                draw.rectangle(((230, 90), (270, 130)), fill=None, outline=255)
-
-                draw = ImageDraw.Draw(thor_img)
-                draw.rectangle(((320, 90), (360, 130)), fill=None, outline=255)
-
-                w,h = raw_img.shape
-                roi_height = int(800/1024*h)
-                roi_width = int(800/1280*w)
-                roi_bot = int(100/1024*h)
-                roi_left = 0
-                draw = ImageDraw.Draw(thor_img)
-                draw.rectangle(((roi_bot,roi_left),(
-                                                     roi_height+roi_bot,roi_left+roi_width)), fill=None, outline=255)
-
-
-
+                draw.rectangle(roi_rect_on_preview(raw_frame), fill=None, outline=255)
 
                 tk_thor_img = customtkinter.CTkImage(thor_img, size=(np.shape(raw_img)[1],
                                                                      np.shape(raw_img)[0]
@@ -374,6 +346,8 @@ class App(customtkinter.CTk):
             axis.clear()
             axis.set_facecolor('#1f1f1f')
             axis.set_title(titles[key], color='#f0f0f0', fontsize=9)
+            axis.set_xlabel('measurement', color='#d0d0d0', fontsize=7)
+            axis.set_ylabel('mm^-1', color='#d0d0d0', fontsize=7)
             axis.tick_params(colors='#d0d0d0', labelsize=7)
             axis.grid(True, color='#3a3a3a', linewidth=0.5)
             for spine in axis.spines.values():
